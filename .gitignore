@@ -1,0 +1,95 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend Build
+frontend/dist/
+frontend/build/
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Storage
+storage/
+uploads/
+generated_images/
+voice_recordings/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# SSL Certificates
+ssl/
+*.pem
+*.crt
+*.key
+
+# Backup Files
+*.backup
+*.bak
+
+# Testing
+.coverage
+.pytest_cache/
+coverage/
+
+# AI Model Files
+models/
+*.bin
+*.safetensors
+
+# Temporary Files
+tmp/
+temp/
+.tmp/
