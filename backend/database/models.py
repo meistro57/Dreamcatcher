@@ -7,6 +7,107 @@ import uuid
 
 Base = declarative_base()
 
+# Association table for user roles
+user_roles = Table(
+    'user_roles',
+    Base.metadata,
+    Column('user_id', String, ForeignKey('users.id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('granted_at', DateTime, default=func.now()),
+    Column('granted_by', String, ForeignKey('users.id'))
+)
+
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    # Basic user information
+    email = Column(String, unique=True, nullable=False, index=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    full_name = Column(String, nullable=False)
+    
+    # Authentication
+    password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    
+    # Profile information
+    avatar_url = Column(String)
+    bio = Column(Text)
+    timezone = Column(String, default='UTC')
+    language = Column(String, default='en')
+    
+    # Account management
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    last_login = Column(DateTime)
+    login_count = Column(Integer, default=0)
+    
+    # Security
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime)
+    password_reset_token = Column(String)
+    password_reset_expires = Column(DateTime)
+    email_verification_token = Column(String)
+    email_verification_expires = Column(DateTime)
+    
+    # Preferences
+    preferences = Column(JSON, default=dict)
+    
+    # Relationships
+    roles = relationship("Role", secondary=user_roles, back_populates="users")
+    ideas = relationship("Idea", back_populates="user")
+    user_sessions = relationship("UserSession", back_populates="user")
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, username={self.username})>"
+
+class Role(Base):
+    __tablename__ = 'roles'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, nullable=False)
+    description = Column(Text)
+    
+    # Permissions
+    permissions = Column(JSON, default=dict)
+    
+    # Metadata
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    users = relationship("User", secondary=user_roles, back_populates="roles")
+    
+    def __repr__(self):
+        return f"<Role(id={self.id}, name={self.name})>"
+
+class UserSession(Base):
+    __tablename__ = 'user_sessions'
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    
+    # Session information
+    token_hash = Column(String, nullable=False, index=True)
+    refresh_token_hash = Column(String)
+    device_info = Column(JSON)
+    ip_address = Column(String)
+    user_agent = Column(String)
+    
+    # Session lifecycle
+    created_at = Column(DateTime, default=func.now())
+    expires_at = Column(DateTime, nullable=False)
+    last_activity = Column(DateTime, default=func.now())
+    is_active = Column(Boolean, default=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="user_sessions")
+    
+    def __repr__(self):
+        return f"<UserSession(id={self.id}, user_id={self.user_id})>"
+
 # Association table for idea-to-idea relationships
 idea_relationships = Table(
     'idea_relationships',
@@ -29,6 +130,7 @@ class Idea(Base):
     __tablename__ = 'ideas'
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
     content_raw = Column(Text, nullable=False)
     content_transcribed = Column(Text)
     content_processed = Column(Text)
@@ -52,6 +154,7 @@ class Idea(Base):
     is_favorite = Column(Boolean, default=False)
     
     # Relationships
+    user = relationship("User", back_populates="ideas")
     tags = relationship("Tag", secondary=idea_tags, back_populates="ideas")
     related_ideas = relationship(
         "Idea", 

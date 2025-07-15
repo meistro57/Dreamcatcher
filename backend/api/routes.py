@@ -10,9 +10,11 @@ import tempfile
 import os
 
 from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
+from ..database.models import User
 from ..agents import agent_registry, AgentListener, AgentClassifier
 from ..services import AIService, AudioProcessor
 from .websocket_manager import WebSocketManager
+from .auth_routes import get_current_user
 from .models import (
     CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
     IdeaResponse, ProposalResponse, AgentStatusResponse
@@ -59,6 +61,7 @@ async def capture_voice(
     audio_file: UploadFile = File(...),
     urgency: str = Form("normal"),
     location: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Capture voice input and process it"""
@@ -88,7 +91,8 @@ async def capture_voice(
                         'audio_file': tmp_file.name,
                         'urgency': urgency,
                         'location_data': {'location': location} if location else {},
-                        'device_info': {'source': 'api_upload'}
+                        'device_info': {'source': 'api_upload'},
+                        'user_id': current_user.id
                     },
                     'timestamp': datetime.utcnow()
                 })()
@@ -124,6 +128,7 @@ async def capture_voice(
 @router.post("/capture/text", response_model=CaptureTextResponse)
 async def capture_text(
     request: CaptureTextRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Capture text input and process it"""
@@ -140,7 +145,8 @@ async def capture_text(
                     'content': request.content,
                     'urgency': request.urgency,
                     'location_data': {'location': request.location} if request.location else {},
-                    'device_info': {'source': 'api_text'}
+                    'device_info': {'source': 'api_text'},
+                    'user_id': current_user.id
                 },
                 'timestamp': datetime.utcnow()
             })()
@@ -174,6 +180,7 @@ async def capture_dream(
     content: str = Form(...),
     dream_type: str = Form("regular"),
     sleep_stage: str = Form("unknown"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Capture dream log entry"""
@@ -188,7 +195,8 @@ async def capture_dream(
                     'type': 'dream',
                     'content': content,
                     'dream_type': dream_type,
-                    'sleep_stage': sleep_stage
+                    'sleep_stage': sleep_stage,
+                    'user_id': current_user.id
                 },
                 'timestamp': datetime.utcnow()
             })()

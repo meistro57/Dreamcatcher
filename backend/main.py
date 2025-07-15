@@ -10,7 +10,9 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from .database import create_tables, db_manager
+from .database.init_auth import init_auth_system
 from .api import router, websocket_manager
+from .api.auth_routes import router as auth_router
 from .agents import agent_registry
 
 # Configure logging
@@ -29,6 +31,10 @@ async def lifespan(app: FastAPI):
     try:
         create_tables()
         logger.info("Database tables created/verified")
+        
+        # Initialize authentication system
+        init_auth_system()
+        logger.info("Authentication system initialized")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
@@ -145,6 +151,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Include API routes
+app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api")
 
 # Static files for generated images, etc.
