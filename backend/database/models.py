@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import ARRAY
 from datetime import datetime
 import uuid
 
@@ -147,6 +148,11 @@ class Idea(Base):
     urgency_score = Column(Float, default=0.0)
     novelty_score = Column(Float, default=0.0)
     viability_score = Column(Float, default=0.0)
+    
+    # Semantic Search
+    content_embedding = Column(ARRAY(Float))  # Vector embedding for semantic search
+    embedding_model = Column(String)  # Model used to generate embedding
+    embedding_updated_at = Column(DateTime)  # When embedding was last updated
     
     # Status
     processing_status = Column(String, default='pending')  # 'pending', 'processing', 'completed', 'failed'

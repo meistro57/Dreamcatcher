@@ -27,6 +27,8 @@ Dreamcatcher is an autonomous AI-powered idea factory that captures, processes, 
 - **Real-time updates** via WebSocket
 - **Voice capture** and transcription
 - **Offline-first** with IndexedDB storage
+- **Comprehensive notification system** with toast and panel views
+- **Advanced filtering and search** with client-side performance
 
 ### AI Services
 - **Claude AI** for creative expansion and code evolution
@@ -47,33 +49,52 @@ Dreamcatcher is an autonomous AI-powered idea factory that captures, processes, 
 │   │   ├── agent_proposer.py      # Proposal generation agent
 │   │   ├── agent_reviewer.py      # Review and resurrection agent
 │   │   ├── agent_meta.py          # Self-improvement agent
+│   │   ├── agent_semantic.py      # Semantic search agent
 │   │   └── base_agent.py          # Base agent class
 │   ├── api/                       # API endpoints
 │   │   └── routes.py              # All API routes
 │   ├── database/                  # Database layer
 │   │   ├── crud.py                # Database operations
 │   │   ├── models.py              # SQLAlchemy models
-│   │   └── database.py            # Database setup
+│   │   ├── database.py            # Database setup
+│   │   ├── migrations/            # Database migrations
+│   │   └── run_migrations.py      # Migration runner
 │   ├── services/                  # Core services
 │   │   ├── ai_service.py          # AI model integrations
 │   │   ├── audio_service.py       # Audio processing
 │   │   ├── comfy_service.py       # ComfyUI integration
-│   │   └── evolution_service.py   # Evolution orchestration
+│   │   ├── evolution_service.py   # Evolution orchestration
+│   │   └── embedding_service.py   # Semantic search service
 │   ├── scheduler/                 # Task scheduling
 │   │   └── evolution_scheduler.py # 24/7 evolution scheduler
+│   ├── tasks/                     # Background tasks
+│   │   └── embedding_tasks.py     # Embedding generation tasks
+│   ├── cli/                       # Command line tools
+│   │   └── semantic_cli.py        # Semantic search CLI
 │   ├── tests/                     # Test suite
 │   │   ├── conftest.py            # Test fixtures
 │   │   ├── test_agents.py         # Agent tests
 │   │   ├── test_api.py            # API tests
-│   │   └── test_database.py       # Database tests
+│   │   ├── test_database.py       # Database tests
+│   │   └── test_semantic_search.py # Semantic search tests
 │   ├── main.py                    # FastAPI application
 │   └── requirements.txt           # Python dependencies
 ├── frontend/
 │   ├── src/
 │   │   ├── components/            # React components
+│   │   │   ├── auth/              # Authentication components
+│   │   │   ├── notifications/     # Notification system components
+│   │   │   ├── semantic/          # Semantic search components
+│   │   │   ├── user/              # User profile components
+│   │   │   └── *.tsx              # Core UI components
 │   │   ├── pages/                 # Page components
 │   │   ├── services/              # API services
 │   │   ├── stores/                # Zustand state management
+│   │   │   ├── authStore.ts       # Authentication state
+│   │   │   ├── ideaStore.ts       # Ideas state management
+│   │   │   ├── notificationStore.ts # Notification system state
+│   │   │   └── *.ts               # Other state stores
+│   │   ├── hooks/                 # Custom React hooks
 │   │   └── utils/                 # Utility functions
 │   ├── public/                    # Static assets
 │   ├── package.json               # Node.js dependencies
@@ -140,6 +161,16 @@ Dreamcatcher is an autonomous AI-powered idea factory that captures, processes, 
 - Claude AI integration for code rewriting
 - Safe backup and rollback mechanisms
 - 24/7 evolution scheduling
+
+### 8. Semantic Agent (`agent_semantic.py`)
+**Personality**: *"I understand meaning, not just words. Let me find the connections you didn't know existed."*
+- **NEW**: Advanced semantic search capabilities
+- Vector embedding generation using sentence-transformers
+- Similarity-based idea discovery and recommendations
+- Automatic embedding generation for new ideas
+- pgvector integration for high-performance similarity search
+- Real-time related idea suggestions
+- Batch processing for large datasets
 
 ## Database Schema
 
@@ -252,6 +283,17 @@ Input → Listener → Classifier → Expander → Visualizer → Proposer → S
 - **Monitoring**: Full system metrics and alerting
 - **Security**: Input validation and sanitization
 
+### Notification System
+- **Real-time notifications**: WebSocket-driven instant updates
+- **Toast notifications**: Auto-dismissing floating notifications with sound
+- **Notification panel**: Comprehensive management with filtering and history
+- **Desktop notifications**: Browser notification API integration
+- **Notification types**: Success, Error, Warning, Info with color coding
+- **Bulk operation feedback**: Notifications for multi-item operations
+- **Customizable settings**: Per-type notification controls
+- **Persistent storage**: Notification history with Zustand persistence
+- **Agent integration**: Automatic notifications from agent activities
+
 ## API Endpoints
 
 ### Ideas
@@ -262,6 +304,8 @@ Input → Listener → Classifier → Expander → Visualizer → Proposer → S
 - `DELETE /api/ideas/{id}` - Delete idea
 - `POST /api/ideas/{id}/archive` - Archive idea
 - `POST /api/ideas/{id}/expand` - Trigger expansion
+- `GET /api/ideas/{id}/related` - Get semantically related ideas
+- `POST /api/ideas/{id}/generate_embedding` - Generate/update embedding
 
 ### Agents
 - `GET /api/agents` - List all agents
@@ -274,6 +318,11 @@ Input → Listener → Classifier → Expander → Visualizer → Proposer → S
 - `POST /api/evolution/trigger` - Force evolution cycle
 - `GET /api/evolution/history` - Evolution history
 - `GET /api/evolution/health` - System health metrics
+
+### Semantic Search
+- `GET /api/search/semantic` - Semantic similarity search
+- `POST /api/embeddings/batch_update` - Batch update embeddings
+- `GET /api/embeddings/stats` - Embedding coverage statistics
 
 ### WebSocket
 - `/ws/ideas` - Real-time idea updates
@@ -403,6 +452,8 @@ curl http://localhost:8000/health
 - Proper indexing
 - Query optimization
 - Connection pooling
+- Vector similarity search with pgvector
+- Embedding storage and retrieval optimization
 - Read replicas (future)
 
 ## Troubleshooting
@@ -412,6 +463,8 @@ curl http://localhost:8000/health
 2. **Evolution failures**: Review evolution history and rollback if needed
 3. **Database connection issues**: Verify PostgreSQL and connection string
 4. **AI service timeouts**: Check API keys and service availability
+5. **Semantic search not working**: Check embedding coverage and pgvector extension
+6. **Embedding generation slow**: Monitor batch processing and adjust batch size
 
 ### Debug Commands
 ```bash
@@ -426,6 +479,15 @@ curl http://localhost:8000/api/evolution/health
 
 # Check logs
 docker-compose logs -f app
+
+# Check semantic search health
+curl http://localhost:8000/api/embeddings/stats
+
+# Run semantic search CLI
+python backend/cli/semantic_cli.py health
+
+# Generate embeddings manually
+python backend/cli/semantic_cli.py generate --batch-size 50
 ```
 
 ## Important Notes for Claude Code

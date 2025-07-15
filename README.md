@@ -36,6 +36,9 @@ A 24/7 self-hosted system that:
 - ✅ **Autonomous Evolution System** for continuous improvement
 - ✅ **CI/CD Pipeline** with GitHub Actions for automated testing and deployment
 - ✅ **Multi-User Authentication** with JWT-based security and user management
+- ✅ **Comprehensive Notification System** with real-time toast notifications, management panel, and desktop notifications
+- ✅ **Advanced Filtering & Search** with multi-criteria client-side filtering and bulk operations
+- ✅ **Semantic Search System** with vector embeddings, similarity search, and intelligent idea discovery
 - ✅ **Comprehensive Documentation** with complete CLAUDE.md for future development
 
 ## Architecture Overview
@@ -54,6 +57,7 @@ A 24/7 self-hosted system that:
 - **Project Agents**: Proposal writing, task creation
 - **Review Agents**: Scheduled idea resurrection
 - **Meta Agents**: Self-improvement and optimization
+- **Semantic Agents**: Vector embeddings and similarity search
 
 ### Tech Stack
 - **Backend**: FastAPI with WebSocket support
@@ -93,7 +97,9 @@ dreamcatcher/
 
 ## Getting Started
 
-### Quick Deploy
+### 🏠 Local Development (Recommended)
+
+For local development without domain requirements:
 
 1. **Clone the repository**
    ```bash
@@ -101,32 +107,50 @@ dreamcatcher/
    cd dreamcatcher
    ```
 
-2. **Set your domain**
+2. **Start with Docker (Easy)**
+   ```bash
+   ./start-local.sh
+   ```
+
+3. **Or start natively**
+   ```bash
+   ./start-native.sh
+   ```
+
+4. **Add your API keys**
+   - Edit `.env` file with your Anthropic and OpenAI API keys
+   - Restart the services
+
+5. **Start capturing ideas**
+   - Visit `http://localhost:3000`
+   - Hit the voice button and speak your idea
+   - Watch the AI agents process it in real-time
+
+📖 **Detailed local setup guide**: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
+
+### 🚀 Production Deployment
+
+For production deployment with domain:
+
+1. **Set your domain**
    ```bash
    export DOMAIN="yourdomain.com"
    export SUBDOMAIN="dreamcatcher"
    export EMAIL="admin@yourdomain.com"
    ```
 
-3. **Deploy with one command**
+2. **Deploy with one command**
    ```bash
    sudo ./deploy.sh
    ```
 
-4. **Configure API keys**
+3. **Configure API keys**
    ```bash
    nano .env
    # Add your ANTHROPIC_API_KEY and OPENAI_API_KEY
    ```
 
-5. **Start capturing ideas**
-   - Visit `https://dreamcatcher.yourdomain.com`
-   - Hit the voice button and speak your idea
-   - Watch the AI agents process it in real-time
-
-### Manual Setup
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
+📖 **Detailed production setup**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Features
 
@@ -136,6 +160,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
 - **Visual Generation**: Context-aware image creation with enhanced ComfyUI integration
 - **Project Tracking**: From idea to implementation with automated proposals
 - **Scheduled Reviews**: Resurrect forgotten brilliance automatically
+- **Real-time Notifications**: Toast notifications, management panel, and desktop alerts
+- **Advanced Search**: Multi-criteria filtering with client-side performance
+- **Semantic Search**: Vector-based similarity search with intelligent idea discovery
+- **Related Ideas**: Automatic detection of conceptually similar ideas
 
 ### Advanced Capabilities
 - **Self-Improvement**: System evolves and optimizes itself using Claude AI
@@ -146,6 +174,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
 - **API-First Design**: Complete REST API with WebSocket real-time updates
 - **CI/CD Pipeline**: Automated testing, deployment, and quality assurance
 - **Multi-User Support**: JWT authentication with role-based access control
+- **Vector Database**: pgvector integration for high-performance similarity search
 
 ### Reliability Features
 - **Robust Error Handling**: Comprehensive error recovery and fallback systems
@@ -156,12 +185,13 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
 
 ## Documentation
 
+- **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** - Local development setup guide
 - **[CLAUDE.md](CLAUDE.md)** - Complete guide for Claude Code development
 - **[Architecture](docs/ARCHITECTURE.md)** - Technical system design
 - **[API Reference](docs/API.md)** - Complete API documentation
 - **[Agent System](docs/AGENTS.md)** - AI personalities and capabilities
 - **[Self-Improvement](docs/SELF_IMPROVEMENT.md)** - Autonomous evolution system
-- **[Deployment Guide](DEPLOYMENT.md)** - Setup and configuration
+- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment guide
 
 ## Status
 

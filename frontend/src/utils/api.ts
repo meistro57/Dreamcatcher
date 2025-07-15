@@ -62,6 +62,8 @@ export const api = {
     create: (data: any) => apiClient.post('/ideas', data),
     update: (id: string, data: any) => apiClient.put(`/ideas/${id}`, data),
     delete: (id: string) => apiClient.delete(`/ideas/${id}`),
+    related: (id: string, params?: any) => apiClient.get(`/ideas/${id}/related`, { params }),
+    generateEmbedding: (id: string) => apiClient.post(`/ideas/${id}/generate_embedding`),
   },
   
   // Capture
@@ -91,6 +93,17 @@ export const api = {
   
   // Stats
   stats: () => apiClient.get('/stats'),
+  
+  // Semantic Search
+  search: {
+    semantic: (params: any) => apiClient.get('/search/semantic', { params }),
+  },
+  
+  // Embeddings
+  embeddings: {
+    stats: () => apiClient.get('/embeddings/stats'),
+    batchUpdate: (batchSize?: number) => apiClient.post('/embeddings/batch_update', { batch_size: batchSize }),
+  },
 }
 
 export default apiClient

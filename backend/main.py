@@ -14,6 +14,7 @@ from .database.init_auth import init_auth_system
 from .api import router, websocket_manager
 from .api.auth_routes import router as auth_router
 from .agents import agent_registry
+from .tasks.embedding_tasks import start_embedding_tasks, stop_embedding_tasks
 
 # Configure logging
 logging.basicConfig(
@@ -69,6 +70,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"WebSocket manager startup failed: {e}")
     
+    # Start embedding tasks
+    try:
+        embedding_task = asyncio.create_task(start_embedding_tasks())
+        app.state.embedding_task = embedding_task
+        
+        logger.info("Embedding task manager started")
+        
+    except Exception as e:
+        logger.error(f"Embedding task manager startup failed: {e}")
+    
     logger.info("Dreamcatcher backend started successfully")
     
     yield
@@ -87,6 +98,15 @@ async def lifespan(app: FastAPI):
         for task in app.state.websocket_tasks:
             task.cancel()
         await asyncio.gather(*app.state.websocket_tasks, return_exceptions=True)
+    
+    # Stop embedding tasks
+    if hasattr(app.state, 'embedding_task'):
+        await stop_embedding_tasks()
+        app.state.embedding_task.cancel()
+        try:
+            await app.state.embedding_task
+        except asyncio.CancelledError:
+            pass
     
     logger.info("Dreamcatcher backend stopped")
 

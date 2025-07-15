@@ -12,6 +12,7 @@ import os
 from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
 from ..database.models import User
 from ..agents import agent_registry, AgentListener, AgentClassifier
+from ..agents.agent_semantic import semantic_agent
 from ..services import AIService, AudioProcessor
 from .websocket_manager import WebSocketManager
 from .auth_routes import get_current_user
@@ -39,6 +40,7 @@ classifier_agent = AgentClassifier()
 # Register agents
 agent_registry.register(listener_agent)
 agent_registry.register(classifier_agent)
+agent_registry.register(semantic_agent)
 
 # Health check endpoint
 @router.get("/health")
@@ -518,6 +520,151 @@ async def get_idea_expansions(idea_id: str, db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Failed to get expansions for idea {idea_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Semantic search endpoints
+@router.get("/search/semantic")
+async def semantic_search(
+    query: str,
+    limit: int = 10,
+    threshold: float = 0.5,
+    current_user: User = Depends(get_current_user)
+):
+    """Search for ideas using semantic similarity"""
+    try:
+        if not query.strip():
+            raise HTTPException(status_code=400, detail="Query cannot be empty")
+        
+        # Use semantic agent to search
+        result = await semantic_agent.search_similar_ideas(
+            query=query,
+            user_id=current_user.id,
+            limit=limit,
+            threshold=threshold
+        )
+        
+        if result.get('success'):
+            return {
+                'success': True,
+                'query': query,
+                'results': result['results'],
+                'total_results': result['total_results'],
+                'search_type': 'semantic'
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Search failed'))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Semantic search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ideas/{idea_id}/related")
+async def get_related_ideas(
+    idea_id: str,
+    limit: int = 5,
+    threshold: float = 0.6,
+    current_user: User = Depends(get_current_user)
+):
+    """Get ideas related to a specific idea"""
+    try:
+        # Use semantic agent to find related ideas
+        result = await semantic_agent.find_related_ideas(
+            idea_id=idea_id,
+            limit=limit,
+            threshold=threshold
+        )
+        
+        if result.get('success'):
+            return {
+                'success': True,
+                'idea_id': idea_id,
+                'related_ideas': result['related_ideas'],
+                'total_found': result['total_found']
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Failed to find related ideas'))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get related ideas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/ideas/{idea_id}/generate_embedding")
+async def generate_idea_embedding(
+    idea_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate or update embedding for a specific idea"""
+    try:
+        # Use semantic agent to process the idea
+        result = await semantic_agent.process_idea(idea_id)
+        
+        if result.get('success'):
+            return {
+                'success': True,
+                'idea_id': idea_id,
+                'embedding_generated': result['embedding_generated'],
+                'related_ideas': result.get('related_ideas', []),
+                'message': result.get('message', 'Embedding generated successfully')
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Failed to generate embedding'))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to generate embedding for idea {idea_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/embeddings/batch_update")
+async def batch_update_embeddings(
+    batch_size: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Update embeddings for ideas that don't have them"""
+    try:
+        # Use semantic agent to batch update embeddings
+        result = await semantic_agent.batch_update_embeddings(batch_size)
+        
+        if result.get('success'):
+            return {
+                'success': True,
+                'updated_count': result['updated_count'],
+                'message': result.get('message', 'Batch update completed')
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Batch update failed'))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to batch update embeddings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/embeddings/stats")
+async def get_embedding_stats(
+    current_user: User = Depends(get_current_user)
+):
+    """Get statistics about embeddings in the system"""
+    try:
+        # Use semantic agent to get stats
+        result = await semantic_agent.get_embedding_stats()
+        
+        if result.get('success'):
+            return {
+                'success': True,
+                'stats': result['stats']
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Failed to get stats'))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get embedding stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Get proposals endpoint
