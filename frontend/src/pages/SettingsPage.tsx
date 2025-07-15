@@ -13,11 +13,18 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useAuthStore } from '../stores/authStore'
+import { useNotificationStore, requestNotificationPermission } from '../stores/notificationStore'
 import UserProfile from '../components/user/UserProfile'
 
 const SettingsPage = () => {
   const { settings, updateSettings } = useAppStore()
   const { user } = useAuthStore()
+  const { 
+    settings: notificationSettings, 
+    updateSettings: updateNotificationSettings,
+    clearAllNotifications,
+    notifications
+  } = useNotificationStore()
   const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'notifications' | 'offline' | 'system'>('profile')
   
@@ -182,141 +189,331 @@ const SettingsPage = () => {
         )}
         
         {activeTab === 'notifications' && (
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
-          {/* Notifications Settings */}
-        <div className="card p-8 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Bell className="w-6 h-6 text-primary-500" />
-            <h2 className="text-xl font-semibold text-white">Notifications</h2>
+          <div className="space-y-8">
+            {/* Notification Settings */}
+            <div className="card p-8">
+              <div className="flex items-center space-x-3 mb-6">
+                <Bell className="w-6 h-6 text-primary-500" />
+                <h2 className="text-xl font-semibold text-white">Notification Settings</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Enable Notifications</h3>
+                    <p className="text-dark-400 text-sm">
+                      Receive notifications for new proposals and system updates
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ enabled: !notificationSettings.enabled })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.enabled ? 'bg-primary-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Sound Notifications</h3>
+                    <p className="text-dark-400 text-sm">
+                      Play a sound when new notifications arrive
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ sound: !notificationSettings.sound })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.sound ? 'bg-primary-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.sound ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Desktop Notifications</h3>
+                    <p className="text-dark-400 text-sm">
+                      Show desktop notifications even when the app is not active
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={async () => {
+                        if (notificationSettings.desktop) {
+                          updateNotificationSettings({ desktop: false })
+                        } else {
+                          const granted = await requestNotificationPermission()
+                          if (granted) {
+                            updateNotificationSettings({ desktop: true })
+                          }
+                        }
+                      }}
+                      className={`w-12 h-6 rounded-full transition-colors ${
+                        notificationSettings.desktop ? 'bg-primary-600' : 'bg-dark-600'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        notificationSettings.desktop ? 'translate-x-6' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification Types */}
+            <div className="card p-8">
+              <h3 className="text-xl font-semibold text-white mb-6">Notification Types</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                    <div>
+                      <h4 className="text-white font-medium">Success Notifications</h4>
+                      <p className="text-dark-400 text-sm">Ideas captured, proposals generated, sync complete</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ 
+                      types: { ...notificationSettings.types, success: !notificationSettings.types.success }
+                    })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.types.success ? 'bg-green-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.types.success ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                    <div>
+                      <h4 className="text-white font-medium">Error Notifications</h4>
+                      <p className="text-dark-400 text-sm">Agent errors, system failures, sync issues</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ 
+                      types: { ...notificationSettings.types, error: !notificationSettings.types.error }
+                    })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.types.error ? 'bg-red-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.types.error ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                    <div>
+                      <h4 className="text-white font-medium">Warning Notifications</h4>
+                      <p className="text-dark-400 text-sm">System health warnings, capacity limits</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ 
+                      types: { ...notificationSettings.types, warning: !notificationSettings.types.warning }
+                    })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.types.warning ? 'bg-yellow-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.types.warning ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                    <div>
+                      <h4 className="text-white font-medium">Info Notifications</h4>
+                      <p className="text-dark-400 text-sm">Idea expansions, visual generation, system evolution</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateNotificationSettings({ 
+                      types: { ...notificationSettings.types, info: !notificationSettings.types.info }
+                    })}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      notificationSettings.types.info ? 'bg-blue-600' : 'bg-dark-600'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      notificationSettings.types.info ? 'translate-x-6' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification History */}
+            <div className="card p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-white">Notification History</h3>
+                <button
+                  onClick={clearAllNotifications}
+                  className="btn btn-danger btn-sm"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <div className="text-sm text-dark-400 mb-4">
+                {notifications.length} total notifications
+              </div>
+              
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {notifications.slice(0, 10).map((notification) => (
+                  <div key={notification.id} className="p-3 bg-dark-700 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          notification.type === 'success' ? 'bg-green-500' :
+                          notification.type === 'error' ? 'bg-red-500' :
+                          notification.type === 'warning' ? 'bg-yellow-500' :
+                          'bg-blue-500'
+                        }`} />
+                        <span className="text-white font-medium">{notification.title}</span>
+                      </div>
+                      <span className="text-dark-400 text-xs">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-dark-300 text-sm mt-1">{notification.message}</p>
+                  </div>
+                ))}
+                {notifications.length === 0 && (
+                  <div className="text-center py-8 text-dark-400">
+                    No notifications yet
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        )}
+        
+        {activeTab === 'offline' && (
+          <div className="card p-8">
+            <div className="flex items-center space-x-3 mb-6">
+              <Wifi className="w-6 h-6 text-primary-500" />
+              <h2 className="text-xl font-semibold text-white">Offline Mode</h2>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-white font-medium mb-1">Enable Offline Mode</h3>
+                  <p className="text-dark-400 text-sm">
+                    Continue capturing ideas when internet is unavailable
+                  </p>
+                </div>
+                <button
+                  onClick={() => updateSettings({ offlineMode: !settings.offlineMode })}
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    settings.offlineMode ? 'bg-primary-600' : 'bg-dark-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    settings.offlineMode ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+              
               <div>
-                <h3 className="text-white font-medium mb-1">Enable Notifications</h3>
-                <p className="text-dark-400 text-sm">
-                  Receive notifications for new proposals and system updates
+                <label className="block text-white font-medium mb-2">
+                  Compression Level: {Math.round(settings.compressionLevel * 100)}%
+                </label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={settings.compressionLevel}
+                  onChange={(e) => updateSettings({ compressionLevel: Number(e.target.value) })}
+                  className="w-full max-w-md"
+                />
+                <p className="text-dark-400 text-sm mt-1">
+                  Audio compression level for offline storage
                 </p>
               </div>
-              <button
-                onClick={() => updateSettings({ notifications: !settings.notifications })}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  settings.notifications ? 'bg-primary-600' : 'bg-dark-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  settings.notifications ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'system' && (
+          <div className="card p-8">
+            <div className="flex items-center space-x-3 mb-6">
+              <Database className="w-6 h-6 text-primary-500" />
+              <h2 className="text-xl font-semibold text-white">System Information</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-white font-medium mb-3">Storage</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Ideas cached</span>
+                    <span className="text-white">127</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Audio files</span>
+                    <span className="text-white">45</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Storage used</span>
+                    <span className="text-white">24.5 MB</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-white font-medium mb-3">Performance</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Sync status</span>
+                    <span className="text-green-400">Connected</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Last sync</span>
+                    <span className="text-white">2 minutes ago</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-dark-300">Pending sync</span>
+                    <span className="text-white">0 items</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-dark-600">
+              <button className="btn btn-secondary mr-4">
+                Clear Cache
+              </button>
+              <button className="btn btn-secondary mr-4">
+                Export Data
+              </button>
+              <button className="btn btn-danger">
+                Reset All Data
               </button>
             </div>
           </div>
-        </div>
-        
-        {/* Offline Settings */}
-        <div className="card p-8 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Wifi className="w-6 h-6 text-primary-500" />
-            <h2 className="text-xl font-semibold text-white">Offline Mode</h2>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-medium mb-1">Enable Offline Mode</h3>
-                <p className="text-dark-400 text-sm">
-                  Continue capturing ideas when internet is unavailable
-                </p>
-              </div>
-              <button
-                onClick={() => updateSettings({ offlineMode: !settings.offlineMode })}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  settings.offlineMode ? 'bg-primary-600' : 'bg-dark-600'
-                }`}
-              >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  settings.offlineMode ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
-            
-            <div>
-              <label className="block text-white font-medium mb-2">
-                Compression Level: {Math.round(settings.compressionLevel * 100)}%
-              </label>
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                value={settings.compressionLevel}
-                onChange={(e) => updateSettings({ compressionLevel: Number(e.target.value) })}
-                className="w-full max-w-md"
-              />
-              <p className="text-dark-400 text-sm mt-1">
-                Audio compression level for offline storage
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* System Information */}
-        <div className="card p-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Database className="w-6 h-6 text-primary-500" />
-            <h2 className="text-xl font-semibold text-white">System Information</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-white font-medium mb-3">Storage</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Ideas cached</span>
-                  <span className="text-white">127</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Audio files</span>
-                  <span className="text-white">45</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Storage used</span>
-                  <span className="text-white">24.5 MB</span>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-white font-medium mb-3">Performance</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Sync status</span>
-                  <span className="text-green-400">Connected</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Last sync</span>
-                  <span className="text-white">2 minutes ago</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-dark-300">Pending sync</span>
-                  <span className="text-white">0 items</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-dark-600">
-            <button className="btn btn-secondary mr-4">
-              Clear Cache
-            </button>
-            <button className="btn btn-secondary mr-4">
-              Export Data
-            </button>
-            <button className="btn btn-danger">
-              Reset All Data
-            </button>
-          </div>
-        </div>
-        </div>
         )}
       </div>
     </div>

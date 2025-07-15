@@ -31,6 +31,7 @@ import {
   Plus
 } from 'lucide-react'
 import { useIdeaStore } from '../stores/ideaStore'
+import { useNotificationStore } from '../stores/notificationStore'
 import { formatDistanceToNow } from 'date-fns'
 
 type SortOption = 'created_at' | 'urgency_score' | 'novelty_score' | 'title' | 'category'
@@ -55,6 +56,7 @@ const IdeasPage = () => {
   const [showBulkActions, setShowBulkActions] = useState(false)
   
   const { ideas, fetchIdeas, isLoading, error, deleteIdea, updateIdea } = useIdeaStore()
+  const { success, error: notifyError } = useNotificationStore()
   
   useEffect(() => {
     fetchIdeas()
@@ -197,18 +199,44 @@ const IdeasPage = () => {
   
   const handleBulkDelete = async () => {
     if (window.confirm(`Delete ${selectedIdeas.size} selected ideas?`)) {
-      for (const ideaId of selectedIdeas) {
-        await deleteIdea(ideaId)
+      try {
+        for (const ideaId of selectedIdeas) {
+          await deleteIdea(ideaId)
+        }
+        success(
+          'Ideas Deleted',
+          `Successfully deleted ${selectedIdeas.size} ideas.`,
+          { source: 'Bulk Actions' }
+        )
+        clearSelection()
+      } catch (err) {
+        notifyError(
+          'Delete Failed',
+          'Failed to delete some ideas. Please try again.',
+          { source: 'Bulk Actions' }
+        )
       }
-      clearSelection()
     }
   }
   
   const handleBulkArchive = async () => {
-    for (const ideaId of selectedIdeas) {
-      await updateIdea(ideaId, { processing_status: 'archived' as any })
+    try {
+      for (const ideaId of selectedIdeas) {
+        await updateIdea(ideaId, { processing_status: 'archived' as any })
+      }
+      success(
+        'Ideas Archived',
+        `Successfully archived ${selectedIdeas.size} ideas.`,
+        { source: 'Bulk Actions' }
+      )
+      clearSelection()
+    } catch (err) {
+      notifyError(
+        'Archive Failed',
+        'Failed to archive some ideas. Please try again.',
+        { source: 'Bulk Actions' }
+      )
     }
-    clearSelection()
   }
   
   const toggleTag = (tag: string) => {

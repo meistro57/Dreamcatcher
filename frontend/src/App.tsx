@@ -17,14 +17,20 @@ import StatsPage from './pages/StatsPage'
 import SettingsPage from './pages/SettingsPage'
 import AuthPage from './pages/AuthPage'
 import NotFoundPage from './pages/NotFoundPage'
+import NotificationContainer from './components/notifications/NotificationContainer'
+import NotificationPanel from './components/notifications/NotificationPanel'
 
 // Utility imports
 import { initializeApp } from './utils/initialization'
+import { useNotifications } from './hooks/useNotifications'
 
 function App() {
   const { isInitialized, initializeStore } = useAppStore()
   const { connect: connectWebSocket } = useWebSocketStore()
   const { checkAuthStatus } = useAuthStore()
+  
+  // Initialize notifications
+  useNotifications()
 
   useEffect(() => {
     // Initialize the app
@@ -58,52 +64,58 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout>
-            <HomePage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/ideas" element={
-        <ProtectedRoute>
-          <Layout>
-            <IdeasPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/ideas/:id" element={
-        <ProtectedRoute>
-          <Layout>
-            <IdeaDetailPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/proposals" element={
-        <ProtectedRoute>
-          <Layout>
-            <ProposalsPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/stats" element={
-        <ProtectedRoute>
-          <Layout>
-            <StatsPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Layout>
-            <SettingsPage />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout>
+              <HomePage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/ideas" element={
+          <ProtectedRoute>
+            <Layout>
+              <IdeasPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/ideas/:id" element={
+          <ProtectedRoute>
+            <Layout>
+              <IdeaDetailPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/proposals" element={
+          <ProtectedRoute>
+            <Layout>
+              <ProposalsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/stats" element={
+          <ProtectedRoute>
+            <Layout>
+              <StatsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Layout>
+              <SettingsPage />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      
+      {/* Global notification components */}
+      <NotificationContainer />
+      <NotificationPanel />
+    </>
   )
 }
 

@@ -2,7 +2,6 @@ import { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import VoiceCaptureButton from './VoiceCaptureButton'
-import NotificationToast from './NotificationToast'
 import ConnectionStatus from './ConnectionStatus'
 
 interface LayoutProps {
@@ -29,9 +28,6 @@ const Layout = ({ children }: LayoutProps) => {
         
         {/* Floating Voice Capture Button */}
         <VoiceCaptureButton />
-        
-        {/* Notifications */}
-        <NotificationToast />
       </div>
     </div>
   )

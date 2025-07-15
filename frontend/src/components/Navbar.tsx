@@ -14,6 +14,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import NotificationButton from './notifications/NotificationButton'
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -69,6 +70,9 @@ const Navbar = () => {
                 )
               })}
             </div>
+            
+            {/* Notification Button */}
+            <NotificationButton />
             
             {/* User Menu */}
             {user && (

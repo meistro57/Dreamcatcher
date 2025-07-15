@@ -21,6 +21,7 @@ import {
 import { useIdeaStore } from '../stores/ideaStore'
 import { useAppStore } from '../stores/appStore'
 import { useWebSocketStore } from '../stores/webSocketStore'
+import { useNotificationStore } from '../stores/notificationStore'
 import { apiClient } from '../utils/api'
 
 interface SystemStats {
@@ -61,6 +62,7 @@ const HomePage = () => {
   const { createIdea, ideas, fetchIdeas } = useIdeaStore()
   const { settings } = useAppStore()
   const { lastMessage } = useWebSocketStore()
+  const { success, error } = useNotificationStore()
   
   // Fetch system statistics
   const fetchStats = async () => {
@@ -176,15 +178,33 @@ const HomePage = () => {
     setIsSubmitting(true)
     
     try {
-      await createIdea(textInput.trim(), 'text', {
+      const ideaId = await createIdea(textInput.trim(), 'text', {
         urgency: settings.defaultUrgency
       })
       
-      setTextInput('')
-      // Refresh stats after creating idea
-      fetchStats()
-    } catch (error) {
-      console.error('Failed to create idea:', error)
+      if (ideaId) {
+        success(
+          'Idea Captured',
+          'Your idea has been captured and is being processed by the agents.',
+          {
+            source: 'Text Input',
+            action: {
+              label: 'View Idea',
+              onClick: () => window.location.href = `/ideas/${ideaId}`
+            }
+          }
+        )
+        setTextInput('')
+        // Refresh stats after creating idea
+        fetchStats()
+      }
+    } catch (err) {
+      console.error('Failed to create idea:', err)
+      error(
+        'Failed to Capture Idea',
+        'There was an error capturing your idea. Please try again.',
+        { source: 'Text Input' }
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -195,13 +215,32 @@ const HomePage = () => {
     if (!dreamContent?.trim()) return
     
     try {
-      await createIdea(dreamContent.trim(), 'dream', {
+      const ideaId = await createIdea(dreamContent.trim(), 'dream', {
         dreamType: 'regular'
       })
-      // Refresh stats after creating dream
-      fetchStats()
-    } catch (error) {
-      console.error('Failed to create dream:', error)
+      
+      if (ideaId) {
+        success(
+          'Dream Captured',
+          'Your dream has been captured and is being analyzed by the agents.',
+          {
+            source: 'Dream Log',
+            action: {
+              label: 'View Dream',
+              onClick: () => window.location.href = `/ideas/${ideaId}`
+            }
+          }
+        )
+        // Refresh stats after creating dream
+        fetchStats()
+      }
+    } catch (err) {
+      console.error('Failed to create dream:', err)
+      error(
+        'Failed to Capture Dream',
+        'There was an error capturing your dream. Please try again.',
+        { source: 'Dream Log' }
+      )
     }
   }
   
