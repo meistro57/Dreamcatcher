@@ -12,6 +12,18 @@
 https://dreamcatcher.yourdomain.com/api
 ```
 
+## ✅ Recent API Improvements
+
+### New Features Added:
+- **Complete CRUD operations** for all idea management
+- **Agent management endpoints** for direct agent communication  
+- **System monitoring APIs** with real-time metrics
+- **Evolution control endpoints** for autonomous system improvement
+- **Error tracking and reporting** with detailed diagnostics
+- **Enhanced WebSocket support** for real-time updates
+- **Health check endpoints** for all services
+- **Comprehensive error handling** with specific error types
+
 ## Authentication
 
 Most endpoints require authentication via JWT tokens:
@@ -427,6 +439,202 @@ Get dashboard analytics data.
       "personal": 10
     },
     "recent_activity": [...]
+  }
+}
+```
+
+### Agent Management
+
+#### GET `/agents/status`
+Get status of all agents.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "agent_id": "listener",
+      "name": "Input Listener",
+      "is_active": true,
+      "total_processed": 1250,
+      "success_rate": 0.98,
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+#### POST `/agents/{agent_id}/message`
+Send message to a specific agent.
+
+**Request:**
+```json
+{
+  "action": "process",
+  "data": {
+    "content": "Direct agent message",
+    "priority": "high"
+  }
+}
+```
+
+#### GET `/agents/{agent_id}/logs`
+Get logs for a specific agent.
+
+**Query Parameters:**
+- `hours`: Hours of logs to retrieve (default: 24)
+- `status`: Filter by log status (started, completed, failed)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "agent_id": "listener",
+    "logs": [
+      {
+        "id": "uuid-here",
+        "action": "process",
+        "status": "completed",
+        "started_at": "2024-01-01T00:00:00Z",
+        "completed_at": "2024-01-01T00:00:30Z",
+        "processing_time": 30.0
+      }
+    ]
+  }
+}
+```
+
+### System Monitoring
+
+#### GET `/metrics`
+Get system metrics.
+
+**Query Parameters:**
+- `metric_name`: Filter by specific metric
+- `hours`: Hours of metrics to retrieve (default: 24)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "metrics": [
+      {
+        "metric_name": "cpu_usage",
+        "metric_value": 65.0,
+        "timestamp": "2024-01-01T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### GET `/errors`
+Get error summary.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_errors": 12,
+    "errors_by_agent": {
+      "listener": [
+        {
+          "action": "process",
+          "error_message": "Connection timeout",
+          "timestamp": "2024-01-01T00:00:00Z"
+        }
+      ]
+    }
+  }
+}
+```
+
+#### GET `/stats`
+Get comprehensive system statistics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "ideas": {
+      "total": 1250,
+      "high_urgency": 45,
+      "by_source": {
+        "voice": 850,
+        "text": 400
+      }
+    },
+    "agents": {
+      "total_agents": 7,
+      "active_agents": 7
+    },
+    "services": {
+      "ai_available": true,
+      "ai_models": ["claude-3-sonnet", "gpt-4"]
+    }
+  }
+}
+```
+
+### Evolution System
+
+#### GET `/evolution/status`
+Get evolution system status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "current_cycle": 42,
+    "last_evolution": "2024-01-01T00:00:00Z",
+    "next_evolution": "2024-01-01T04:00:00Z",
+    "health_score": 85.5,
+    "improvements_applied": 12
+  }
+}
+```
+
+#### POST `/evolution/trigger`
+Manually trigger evolution cycle.
+
+**Request:**
+```json
+{
+  "strategy": "performance_optimization",
+  "force": false
+}
+```
+
+#### POST `/evolution/rollback`
+Rollback to previous version.
+
+**Request:**
+```json
+{
+  "version": "1.0.41",
+  "reason": "Performance regression"
+}
+```
+
+#### GET `/evolution/metrics`
+Get evolution performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "evolution_cycles": 42,
+    "successful_evolutions": 40,
+    "rollbacks": 2,
+    "average_improvement": 3.2,
+    "performance_trend": "improving"
   }
 }
 ```

@@ -10,6 +10,7 @@ import os
 from .base_agent import BaseAgent
 from ..database import get_db, IdeaCRUD, VisualizationCRUD
 from ..services import AIService
+from ..services.comfy_service import ComfyUIService
 
 class AgentVisualizer(BaseAgent):
     """
@@ -31,6 +32,9 @@ class AgentVisualizer(BaseAgent):
         
         # AI service for prompt generation
         self.ai_service = AIService()
+        
+        # ComfyUI service for image generation
+        self.comfy_service = ComfyUIService()
         
         # Visual styles by category
         self.visual_styles = {
@@ -295,7 +299,7 @@ class AgentVisualizer(BaseAgent):
             return ""
     
     async def _generate_visual(self, prompt: str, category: str, variant_type: str) -> Optional[Dict[str, Any]]:
-        """Generate visual using ComfyUI"""
+        """Generate visual using enhanced ComfyUI service"""
         try:
             if not self.comfyui_enabled:
                 # Mock generation for testing
@@ -310,102 +314,69 @@ class AgentVisualizer(BaseAgent):
             # Get style configuration
             style_config = self.visual_styles.get(category, self.visual_styles['creative'])
             
-            # Create workflow with prompts
-            workflow = self._create_workflow(prompt, style_config)
+            # Build full prompts
+            positive_prompt = f"{prompt}, {style_config['style']}"
+            negative_prompt = style_config['negative']
             
             # Generate unique seed for variety
             seed = hash(prompt + variant_type) % 1000000
-            workflow["3"]["inputs"]["seed"] = seed
             
-            # Send request to ComfyUI
-            response = await self._send_comfyui_request(workflow)
+            # Create workflow using the enhanced service
+            workflow = self.comfy_service.create_basic_workflow(
+                positive_prompt=positive_prompt,
+                negative_prompt=negative_prompt,
+                steps=style_config['steps'],
+                cfg_scale=style_config['cfg_scale'],
+                sampler=style_config['sampler'],
+                seed=seed
+            )
             
-            if response and response.get('success'):
+            # Generate image with error handling
+            result = await self.comfy_service.generate_image(
+                workflow=workflow,
+                prompt_id=f"idea_{variant_type}_{seed}"
+            )
+            
+            if result.success:
                 return {
-                    'image_path': response.get('image_path', ''),
+                    'image_path': result.image_path,
                     'prompt': prompt,
                     'style_config': style_config,
                     'params': {
                         'seed': seed,
                         'steps': style_config['steps'],
                         'cfg': style_config['cfg_scale'],
-                        'sampler': style_config['sampler']
+                        'sampler': style_config['sampler'],
+                        'execution_time': result.execution_time
                     },
                     'type': variant_type
                 }
-            
-            return None
+            else:
+                self.logger.error(f"ComfyUI generation failed: {result.error}")
+                return None
             
         except Exception as e:
             self.logger.error(f"Visual generation failed: {e}")
             return None
     
-    def _create_workflow(self, prompt: str, style_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Create ComfyUI workflow with prompt and style"""
-        workflow = self.default_workflow.copy()
-        
-        # Build full positive prompt
-        positive_prompt = f"{prompt}, {style_config['style']}"
-        negative_prompt = style_config['negative']
-        
-        # Update workflow with prompts
-        workflow["6"]["inputs"]["text"] = positive_prompt
-        workflow["7"]["inputs"]["text"] = negative_prompt
-        
-        # Update sampler settings
-        workflow["3"]["inputs"]["steps"] = style_config['steps']
-        workflow["3"]["inputs"]["cfg"] = style_config['cfg_scale']
-        workflow["3"]["inputs"]["sampler_name"] = style_config['sampler']
-        
-        return workflow
-    
-    async def _send_comfyui_request(self, workflow: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Send request to ComfyUI API"""
+    async def get_comfyui_status(self) -> Dict[str, Any]:
+        """Get ComfyUI service status"""
         try:
-            # Queue the workflow
-            queue_response = requests.post(
-                f"{self.comfyui_url}/prompt",
-                json={"prompt": workflow},
-                timeout=30
-            )
+            health = await self.comfy_service.health_check()
+            stats = self.comfy_service.get_statistics()
+            queue_status = await self.comfy_service.get_queue_status()
             
-            if queue_response.status_code != 200:
-                self.logger.error(f"ComfyUI queue failed: {queue_response.status_code}")
-                return None
-            
-            prompt_id = queue_response.json().get('prompt_id')
-            if not prompt_id:
-                return None
-            
-            # Wait for completion (simplified - in production, use websockets)
-            await asyncio.sleep(10)  # Basic wait - should be replaced with proper polling
-            
-            # Get result
-            history_response = requests.get(f"{self.comfyui_url}/history/{prompt_id}")
-            if history_response.status_code != 200:
-                return None
-            
-            history = history_response.json()
-            if prompt_id not in history:
-                return None
-            
-            # Extract image path (simplified)
-            outputs = history[prompt_id].get('outputs', {})
-            if '5' in outputs and 'images' in outputs['5']:
-                image_info = outputs['5']['images'][0]
-                image_path = f"/opt/dreamcatcher/storage/visuals/{image_info['filename']}"
-                
-                return {
-                    'success': True,
-                    'image_path': image_path,
-                    'filename': image_info['filename']
-                }
-            
-            return None
-            
+            return {
+                'health': health,
+                'statistics': stats,
+                'queue': queue_status
+            }
         except Exception as e:
-            self.logger.error(f"ComfyUI request failed: {e}")
-            return None
+            self.logger.error(f"Error getting ComfyUI status: {e}")
+            return {
+                'error': str(e),
+                'health': {'status': 'error', 'available': False}
+            }
     
     def _get_alternative_category(self, category: str) -> str:
         """Get alternative category for variety"""

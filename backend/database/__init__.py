@@ -5,7 +5,8 @@ from .models import (
 )
 from .crud import (
     IdeaCRUD, TagCRUD, ExpansionCRUD, VisualCRUD, 
-    ProposalCRUD, AgentCRUD
+    ProposalCRUD, AgentCRUD, SystemMetricsCRUD, 
+    AgentLogCRUD, VisualizationCRUD, TaskCRUD
 )
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     'Idea', 'Tag', 'IdeaExpansion', 'IdeaVisual', 'Proposal', 'ProposalTask',
     'Agent', 'AgentLog', 'SystemMetrics', 'ScheduledTask',
     'IdeaCRUD', 'TagCRUD', 'ExpansionCRUD', 'VisualCRUD', 
-    'ProposalCRUD', 'AgentCRUD'
+    'ProposalCRUD', 'AgentCRUD', 'SystemMetricsCRUD', 
+    'AgentLogCRUD', 'VisualizationCRUD', 'TaskCRUD'
 ]

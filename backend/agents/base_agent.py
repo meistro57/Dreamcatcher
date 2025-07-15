@@ -41,6 +41,10 @@ class BaseAgent(ABC):
         
         # Register agent in database
         self._register_agent()
+        
+        # Register with agent registry
+        from . import agent_registry
+        agent_registry.register(self)
     
     def _register_agent(self):
         """Register agent in database"""
@@ -201,9 +205,13 @@ class BaseAgent(ABC):
         await self._deliver_message(message)
     
     async def _deliver_message(self, message: AgentMessage):
-        """Deliver message to target agent (placeholder implementation)"""
-        # This would be handled by the agent registry/message bus
-        self.logger.info(f"Delivering message {message.id} to {message.recipient}")
+        """Deliver message to target agent via registry"""
+        from . import agent_registry
+        try:
+            await agent_registry.send_message(message)
+            self.logger.info(f"Delivered message {message.id} to {message.recipient}")
+        except Exception as e:
+            self.logger.error(f"Failed to deliver message {message.id}: {e}")
     
     async def _send_response(self, original_message: AgentMessage, result: Optional[Dict[str, Any]]):
         """Send response back to original sender"""

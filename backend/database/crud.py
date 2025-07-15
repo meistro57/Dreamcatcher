@@ -119,6 +119,97 @@ class IdeaCRUD:
                 Idea.urgency_score > 50.0
             )
         ).all()
+    
+    @staticmethod
+    def get_dormant_ideas(db: Session, days: int = 30) -> List[Idea]:
+        """Get dormant ideas that haven't been processed recently"""
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        return db.query(Idea).filter(
+            and_(
+                Idea.updated_at < cutoff_date,
+                Idea.is_archived == False,
+                Idea.urgency_score < 30.0
+            )
+        ).order_by(desc(Idea.created_at)).all()
+    
+    @staticmethod
+    def get_ideas_for_context_review(db: Session, limit: int = 50) -> List[Idea]:
+        """Get ideas that need context review"""
+        return db.query(Idea).filter(
+            and_(
+                Idea.is_archived == False,
+                or_(
+                    Idea.content_processed.is_(None),
+                    Idea.content_processed == ''
+                )
+            )
+        ).order_by(desc(Idea.urgency_score)).limit(limit).all()
+    
+    @staticmethod
+    def get_ideas_by_patterns(db: Session, patterns: List[str]) -> List[Idea]:
+        """Get ideas matching specific patterns"""
+        if not patterns:
+            return []
+        
+        pattern_conditions = []
+        for pattern in patterns:
+            pattern_term = f"%{pattern}%"
+            pattern_conditions.append(
+                or_(
+                    Idea.content_raw.ilike(pattern_term),
+                    Idea.content_transcribed.ilike(pattern_term),
+                    Idea.content_processed.ilike(pattern_term)
+                )
+            )
+        
+        return db.query(Idea).filter(
+            and_(
+                Idea.is_archived == False,
+                or_(*pattern_conditions)
+            )
+        ).order_by(desc(Idea.urgency_score)).all()
+    
+    @staticmethod
+    def get_random_ideas(db: Session, count: int = 10) -> List[Idea]:
+        """Get random ideas for serendipity reviews"""
+        from sqlalchemy.sql import func
+        return db.query(Idea).filter(
+            Idea.is_archived == False
+        ).order_by(func.random()).limit(count).all()
+    
+    @staticmethod
+    def get_successful_ideas(db: Session, min_score: float = 70.0) -> List[Idea]:
+        """Get successful ideas for pattern analysis"""
+        return db.query(Idea).filter(
+            and_(
+                Idea.is_archived == False,
+                Idea.urgency_score >= min_score,
+                Idea.quality_score >= min_score
+            )
+        ).order_by(desc(Idea.quality_score)).all()
+    
+    @staticmethod
+    def update_idea_urgency(db: Session, idea_id: str, urgency_score: float) -> Optional[Idea]:
+        """Update idea urgency score"""
+        idea = db.query(Idea).filter(Idea.id == idea_id).first()
+        if idea:
+            idea.urgency_score = urgency_score
+            idea.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(idea)
+        return idea
+    
+    @staticmethod
+    def archive_idea(db: Session, idea_id: str, reason: str = '') -> Optional[Idea]:
+        """Archive an idea"""
+        idea = db.query(Idea).filter(Idea.id == idea_id).first()
+        if idea:
+            idea.is_archived = True
+            idea.archived_reason = reason
+            idea.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(idea)
+        return idea
 
 class TagCRUD:
     """CRUD operations for Tags"""
@@ -359,3 +450,266 @@ class AgentCRUD:
             'success_rate': (successful_tasks / total_tasks) if total_tasks > 0 else 0,
             'avg_processing_time': avg_processing_time
         }
+    
+    @staticmethod
+    def get_all_agents(db: Session) -> List[Agent]:
+        """Get all registered agents"""
+        return db.query(Agent).all()
+    
+    @staticmethod
+    def get_agent(db: Session, agent_id: str) -> Optional[Agent]:
+        """Get agent by ID"""
+        return db.query(Agent).filter(Agent.id == agent_id).first()
+
+class SystemMetricsCRUD:
+    """CRUD operations for System Metrics"""
+    
+    @staticmethod
+    def record_metric(
+        db: Session,
+        metric_name: str,
+        metric_value: float,
+        metric_type: str = 'gauge',
+        metadata: Optional[Dict] = None
+    ) -> SystemMetrics:
+        """Record a system metric"""
+        metric = SystemMetrics(
+            metric_name=metric_name,
+            metric_value=metric_value,
+            metric_type=metric_type,
+            metadata=metadata or {}
+        )
+        db.add(metric)
+        db.commit()
+        db.refresh(metric)
+        return metric
+    
+    @staticmethod
+    def get_metrics(
+        db: Session,
+        metric_name: Optional[str] = None,
+        hours: int = 24
+    ) -> List[SystemMetrics]:
+        """Get system metrics"""
+        cutoff_date = datetime.utcnow() - timedelta(hours=hours)
+        
+        query = db.query(SystemMetrics).filter(
+            SystemMetrics.timestamp >= cutoff_date
+        )
+        
+        if metric_name:
+            query = query.filter(SystemMetrics.metric_name == metric_name)
+        
+        return query.order_by(desc(SystemMetrics.timestamp)).all()
+    
+    @staticmethod
+    def get_latest_metrics(db: Session) -> List[SystemMetrics]:
+        """Get latest values for all metrics"""
+        from sqlalchemy.sql import func
+        
+        subquery = db.query(
+            SystemMetrics.metric_name,
+            func.max(SystemMetrics.timestamp).label('latest_timestamp')
+        ).group_by(SystemMetrics.metric_name).subquery()
+        
+        return db.query(SystemMetrics).join(
+            subquery,
+            and_(
+                SystemMetrics.metric_name == subquery.c.metric_name,
+                SystemMetrics.timestamp == subquery.c.latest_timestamp
+            )
+        ).all()
+
+class AgentLogCRUD:
+    """CRUD operations for Agent Logs"""
+    
+    @staticmethod
+    def get_agent_logs(
+        db: Session,
+        agent_id: Optional[str] = None,
+        status: Optional[str] = None,
+        hours: int = 24
+    ) -> List[AgentLog]:
+        """Get agent logs with filtering"""
+        cutoff_date = datetime.utcnow() - timedelta(hours=hours)
+        
+        query = db.query(AgentLog).filter(
+            AgentLog.started_at >= cutoff_date
+        )
+        
+        if agent_id:
+            query = query.filter(AgentLog.agent_id == agent_id)
+        
+        if status:
+            query = query.filter(AgentLog.status == status)
+        
+        return query.order_by(desc(AgentLog.started_at)).all()
+    
+    @staticmethod
+    def get_error_logs(db: Session, hours: int = 24) -> List[AgentLog]:
+        """Get error logs"""
+        cutoff_date = datetime.utcnow() - timedelta(hours=hours)
+        return db.query(AgentLog).filter(
+            and_(
+                AgentLog.status == 'failed',
+                AgentLog.started_at >= cutoff_date,
+                AgentLog.error_message.is_not(None)
+            )
+        ).order_by(desc(AgentLog.started_at)).all()
+    
+    @staticmethod
+    def get_performance_summary(db: Session, hours: int = 24) -> Dict[str, Any]:
+        """Get performance summary across all agents"""
+        cutoff_date = datetime.utcnow() - timedelta(hours=hours)
+        
+        logs = db.query(AgentLog).filter(
+            AgentLog.started_at >= cutoff_date
+        ).all()
+        
+        total_tasks = len(logs)
+        successful_tasks = len([log for log in logs if log.status == 'completed'])
+        failed_tasks = len([log for log in logs if log.status == 'failed'])
+        in_progress_tasks = len([log for log in logs if log.status == 'started'])
+        
+        agent_stats = {}
+        for log in logs:
+            if log.agent_id not in agent_stats:
+                agent_stats[log.agent_id] = {
+                    'total': 0,
+                    'successful': 0,
+                    'failed': 0,
+                    'in_progress': 0
+                }
+            agent_stats[log.agent_id]['total'] += 1
+            if log.status == 'completed':
+                agent_stats[log.agent_id]['successful'] += 1
+            elif log.status == 'failed':
+                agent_stats[log.agent_id]['failed'] += 1
+            elif log.status == 'started':
+                agent_stats[log.agent_id]['in_progress'] += 1
+        
+        return {
+            'total_tasks': total_tasks,
+            'successful_tasks': successful_tasks,
+            'failed_tasks': failed_tasks,
+            'in_progress_tasks': in_progress_tasks,
+            'success_rate': (successful_tasks / total_tasks) if total_tasks > 0 else 0,
+            'agent_stats': agent_stats
+        }
+
+class VisualizationCRUD:
+    """CRUD operations for Visualizations"""
+    
+    @staticmethod
+    def create_visualization(
+        db: Session,
+        idea_id: str,
+        visualization_type: str,
+        data: Dict[str, Any],
+        config: Optional[Dict] = None
+    ) -> IdeaVisual:
+        """Create a visualization record"""
+        visual = IdeaVisual(
+            idea_id=idea_id,
+            image_path=f"viz_{idea_id}_{visualization_type}.json",
+            prompt_used=f"Generated {visualization_type} visualization",
+            style_config=config or {},
+            generation_params={'type': visualization_type, 'data': data}
+        )
+        db.add(visual)
+        db.commit()
+        db.refresh(visual)
+        return visual
+    
+    @staticmethod
+    def get_visualizations(
+        db: Session,
+        idea_id: Optional[str] = None,
+        viz_type: Optional[str] = None
+    ) -> List[IdeaVisual]:
+        """Get visualizations with filtering"""
+        query = db.query(IdeaVisual)
+        
+        if idea_id:
+            query = query.filter(IdeaVisual.idea_id == idea_id)
+        
+        if viz_type:
+            query = query.filter(
+                IdeaVisual.generation_params['type'].astext == viz_type
+            )
+        
+        return query.order_by(desc(IdeaVisual.created_at)).all()
+    
+    @staticmethod
+    def update_visualization_quality(
+        db: Session,
+        visual_id: str,
+        quality_score: float,
+        feedback: str = ''
+    ) -> Optional[IdeaVisual]:
+        """Update visualization quality score"""
+        visual = db.query(IdeaVisual).filter(IdeaVisual.id == visual_id).first()
+        if visual:
+            visual.quality_score = quality_score
+            visual.style_config['feedback'] = feedback
+            visual.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(visual)
+        return visual
+
+class TaskCRUD:
+    """CRUD operations for Scheduled Tasks"""
+    
+    @staticmethod
+    def create_task(
+        db: Session,
+        task_type: str,
+        target_agent: str,
+        task_data: Dict[str, Any],
+        schedule_time: Optional[datetime] = None
+    ) -> ScheduledTask:
+        """Create a scheduled task"""
+        task = ScheduledTask(
+            task_type=task_type,
+            target_agent=target_agent,
+            task_data=task_data,
+            schedule_time=schedule_time or datetime.utcnow()
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        return task
+    
+    @staticmethod
+    def get_pending_tasks(db: Session) -> List[ScheduledTask]:
+        """Get pending tasks"""
+        return db.query(ScheduledTask).filter(
+            and_(
+                ScheduledTask.status == 'pending',
+                ScheduledTask.schedule_time <= datetime.utcnow()
+            )
+        ).order_by(ScheduledTask.schedule_time).all()
+    
+    @staticmethod
+    def complete_task(db: Session, task_id: str, result: Optional[Dict] = None) -> Optional[ScheduledTask]:
+        """Mark task as completed"""
+        task = db.query(ScheduledTask).filter(ScheduledTask.id == task_id).first()
+        if task:
+            task.status = 'completed'
+            task.result = result or {}
+            task.completed_at = datetime.utcnow()
+            db.commit()
+            db.refresh(task)
+        return task
+    
+    @staticmethod
+    def fail_task(db: Session, task_id: str, error_message: str) -> Optional[ScheduledTask]:
+        """Mark task as failed"""
+        task = db.query(ScheduledTask).filter(ScheduledTask.id == task_id).first()
+        if task:
+            task.status = 'failed'
+            task.error_message = error_message
+            task.completed_at = datetime.utcnow()
+            db.commit()
+            db.refresh(task)
+        return task
