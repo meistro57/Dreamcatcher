@@ -4,15 +4,18 @@ import { useEffect } from 'react'
 // Store imports
 import { useAppStore } from './stores/appStore'
 import { useWebSocketStore } from './stores/webSocketStore'
+import { useAuthStore } from './stores/authStore'
 
 // Component imports
 import Layout from './components/Layout'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 import HomePage from './pages/HomePage'
 import IdeasPage from './pages/IdeasPage'
 import IdeaDetailPage from './pages/IdeaDetailPage'
 import ProposalsPage from './pages/ProposalsPage'
 import StatsPage from './pages/StatsPage'
 import SettingsPage from './pages/SettingsPage'
+import AuthPage from './pages/AuthPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // Utility imports
@@ -21,6 +24,7 @@ import { initializeApp } from './utils/initialization'
 function App() {
   const { isInitialized, initializeStore } = useAppStore()
   const { connect: connectWebSocket } = useWebSocketStore()
+  const { checkAuthStatus } = useAuthStore()
 
   useEffect(() => {
     // Initialize the app
@@ -28,6 +32,9 @@ function App() {
       try {
         await initializeApp()
         initializeStore()
+        
+        // Check authentication status
+        await checkAuthStatus()
         
         // Connect to WebSocket for real-time updates
         connectWebSocket()
@@ -37,7 +44,7 @@ function App() {
     }
 
     init()
-  }, [initializeStore, connectWebSocket])
+  }, [initializeStore, connectWebSocket, checkAuthStatus])
 
   if (!isInitialized) {
     return (
@@ -51,17 +58,52 @@ function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/ideas" element={<IdeasPage />} />
-        <Route path="/ideas/:id" element={<IdeaDetailPage />} />
-        <Route path="/proposals" element={<ProposalsPage />} />
-        <Route path="/stats" element={<StatsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Layout>
+            <HomePage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/ideas" element={
+        <ProtectedRoute>
+          <Layout>
+            <IdeasPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/ideas/:id" element={
+        <ProtectedRoute>
+          <Layout>
+            <IdeaDetailPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/proposals" element={
+        <ProtectedRoute>
+          <Layout>
+            <ProposalsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/stats" element={
+        <ProtectedRoute>
+          <Layout>
+            <StatsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Layout>
+            <SettingsPage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   )
 }
 

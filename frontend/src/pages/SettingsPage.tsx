@@ -8,13 +8,18 @@ import {
   Database,
   Zap,
   Save,
-  RefreshCw
+  RefreshCw,
+  User
 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
+import { useAuthStore } from '../stores/authStore'
+import UserProfile from '../components/user/UserProfile'
 
 const SettingsPage = () => {
   const { settings, updateSettings } = useAppStore()
+  const { user } = useAuthStore()
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'notifications' | 'offline' | 'system'>('profile')
   
   const handleSave = async () => {
     setIsSaving(true)
@@ -41,64 +46,102 @@ const SettingsPage = () => {
     }
   }
   
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'voice', label: 'Voice', icon: Mic },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'offline', label: 'Offline', icon: Wifi },
+    { id: 'system', label: 'System', icon: Database }
+  ]
+
   return (
-    <div className="min-h-screen bg-dark-900 mobile-padding">
-      <div className="max-w-4xl mx-auto pt-8 pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-            <p className="text-dark-300">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Settings</h1>
+            <p className="text-gray-600 dark:text-gray-400">
               Configure your Dreamcatcher experience
             </p>
           </div>
           
-          <div className="flex space-x-2">
-            <button
-              onClick={handleReset}
-              className="btn btn-secondary flex items-center space-x-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Reset</span>
-            </button>
-            
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="btn btn-primary flex items-center space-x-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save'}</span>
-            </button>
-          </div>
-        </div>
-        
-        {/* Voice Capture Settings */}
-        <div className="card p-8 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Mic className="w-6 h-6 text-primary-500" />
-            <h2 className="text-xl font-semibold text-white">Voice Capture</h2>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-medium mb-1">Auto-capture</h3>
-                <p className="text-dark-400 text-sm">
-                  Automatically start recording when wake word is detected
-                </p>
-              </div>
+          {activeTab !== 'profile' && (
+            <div className="flex space-x-2">
               <button
-                onClick={() => updateSettings({ autoCapture: !settings.autoCapture })}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  settings.autoCapture ? 'bg-primary-600' : 'bg-dark-600'
-                }`}
+                onClick={handleReset}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  settings.autoCapture ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <RefreshCw className="w-4 h-4" />
+                <span>Reset</span>
+              </button>
+              
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSaving ? 'Saving...' : 'Save'}</span>
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-8">
+          <nav className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="font-medium">{tab.label}</span>
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'profile' && (
+          <UserProfile />
+        )}
+        
+        {activeTab === 'voice' && (
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+            <div className="flex items-center space-x-3 mb-6">
+              <Mic className="w-6 h-6 text-blue-500" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Voice Capture</h2>
+            </div>
+          
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-gray-900 dark:text-white font-medium mb-1">Auto-capture</h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Automatically start recording when wake word is detected
+                  </p>
+                </div>
+                <button
+                  onClick={() => updateSettings({ autoCapture: !settings.autoCapture })}
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    settings.autoCapture ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    settings.autoCapture ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
             
             <div>
               <label className="block text-white font-medium mb-2">

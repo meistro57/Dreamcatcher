@@ -45,6 +45,16 @@ export const api = {
   // Health check
   health: () => apiClient.get('/health'),
   
+  // Authentication
+  auth: {
+    login: (data: any) => apiClient.post('/auth/login', data),
+    register: (data: any) => apiClient.post('/auth/register', data),
+    logout: () => apiClient.post('/auth/logout'),
+    refresh: (data: any) => apiClient.post('/auth/refresh', data),
+    me: () => apiClient.get('/auth/me'),
+    changePassword: (data: any) => apiClient.post('/auth/change-password', data),
+  },
+  
   // Ideas
   ideas: {
     list: (params?: any) => apiClient.get('/ideas', { params }),
