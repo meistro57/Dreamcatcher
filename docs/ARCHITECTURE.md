@@ -68,6 +68,11 @@ Dreamcatcher is a distributed AI agent system designed to capture, process, and 
    - Context-aware relevance scoring
    - Pattern-based recommendations
 
+7. **Meta Agent** (`agent_meta.py`)
+   - System performance analysis
+   - Autonomous code evolution
+   - Self-improvement coordination
+
 ### 3. API Layer
 
 **FastAPI Backend** (`backend/api/`)
@@ -82,6 +87,8 @@ Dreamcatcher is a distributed AI agent system designed to capture, process, and 
 - `/api/ideas` - Idea management
 - `/api/proposals` - Proposal access
 - `/api/agents` - Agent status and control
+- `/api/evolution` - Self-improvement control
+- `/api/scheduler` - Evolution scheduling
 - `/api/health` - System health monitoring
 
 ### 4. Frontend Layer
@@ -108,6 +115,11 @@ User Input → Listener Agent → Classifier Agent → Expander Agent → Visual
 ### Review Flow
 ```
 Reviewer Agent → Assessment → Action Execution → Pipeline Re-entry
+```
+
+### Evolution Flow
+```
+Meta Agent → System Analysis → Improvement Identification → Code Evolution → Validation → Application
 ```
 
 ### Storage Flow
@@ -250,10 +262,11 @@ nginx (reverse proxy)
 ## Future Enhancements
 
 ### Self-Improvement System
-- Claude Code integration for system evolution
-- Automated code generation and testing
-- Performance optimization recommendations
-- Feature development suggestions
+- Meta Agent for autonomous evolution
+- Claude AI integration for code rewriting
+- Automated performance optimization
+- Error reduction and quality improvements
+- Evolution scheduling and monitoring
 
 ### Advanced AI Features
 - Vector similarity search

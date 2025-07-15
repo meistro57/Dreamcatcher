@@ -305,19 +305,60 @@ proposal_sections = {
 
 **Role:** Scheduled reviews and idea resurrection
 
-**Capabilities:**
-- Multi-strategy review approaches
-- Context-aware idea surfacing
-- Pattern-based recommendations
-- Serendipitous discovery
-- Automated reassessment
+### 7. Meta Agent (`agent_meta.py`)
 
-**Review Strategies:**
-- **Time-based**: Age and dormancy scoring
-- **Context-based**: Current relevance assessment
-- **Pattern-based**: User preference matching
-- **Serendipity**: Random discovery for inspiration
-- **Priority Queue**: High-value immediate review
+**Personality:** *"I analyze. I evolve. I make us better while you sleep."*
+
+**Role:** System self-improvement and autonomous evolution
+
+**Capabilities:**
+- System performance analysis and health scoring
+- Improvement opportunity identification
+- Claude AI integration for code rewriting
+- Automated performance optimization
+- Error reduction and quality improvements
+- Safe backup and rollback mechanisms
+- Evolution scheduling and monitoring
+**Evolution Strategies:**
+- **Performance Optimization**: Async improvements, caching, algorithm optimization
+- **Error Reduction**: Exception handling, validation, recovery mechanisms
+- **Feature Enhancement**: New capabilities and improvements
+- **Code Quality**: Refactoring, documentation, best practices
+- **Agent Coordination**: Communication and workflow optimization
+
+**Processing Flow:**
+```python
+async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    # 1. Analyze current system state
+    # 2. Identify improvement opportunities  
+    # 3. Execute improvements with Claude AI
+    # 4. Validate and apply changes safely
+    # 5. Monitor results and rollback if needed
+```
+
+## Agent Evolution
+
+The Meta Agent enables the entire system to evolve autonomously:
+
+**Self-Improvement Cycle:**
+1. **Health Monitoring**: Continuous performance tracking
+2. **Issue Detection**: Automated problem identification  
+3. **Code Analysis**: Claude AI reviews and improves code
+4. **Safe Deployment**: Backup, validate, apply, monitor
+5. **Results Tracking**: Performance improvement verification
+
+**Evolution Triggers:**
+- Error rates above 5%
+- Response times over 10 seconds
+- Low system health scores
+- Code quality issues
+- Performance degradation
+**Safety Features:**
+- Automatic backups before any changes
+- Code validation and syntax checking
+- Rollback capabilities for failed improvements
+- Emergency stop controls
+- Performance monitoring and alerts
 
 **Processing Flow:**
 ```python
@@ -356,8 +397,13 @@ graph TD
     H[Reviewer Agent] --> I[Reassessment]
     I --> C
     
-    J[Scheduler] --> H
-    J --> K[Health Monitoring]
+    J[Meta Agent] --> K[System Analysis]
+    K --> L[Code Evolution]
+    L --> M[Performance Improvement]
+    
+    N[Scheduler] --> H
+    N --> J
+    N --> O[Health Monitoring]
 ```
 
 ### Message Queue System
@@ -541,8 +587,8 @@ agents:
     serendipity_factor: 0.2
 ```
 
-This agent system creates a living, breathing AI collective that thinks about your ideas around the clock, each with its own personality and expertise, working together to turn your creative sparks into actionable reality.
+This agent system creates a living, breathing AI collective that thinks about your ideas around the clock, each with its own personality and expertise, working together to turn your creative sparks into actionable reality. The Meta Agent ensures the entire system continuously evolves and improves itself.
 
 ---
 
-*Six AI personalities, one shared mission: never let a great idea slip away.*
+*Seven AI personalities, one shared mission: never let a great idea slip away, and always get better at catching them.*
