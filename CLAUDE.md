@@ -1,319 +1,453 @@
-# Claude Code Guide for Dreamcatcher
+# Dreamcatcher - AI-Powered Idea Factory
 
 ## Project Overview
-**Dreamcatcher** is an AI-powered idea factory that captures, develops, and evolves ideas through a network of specialized AI agents. The system operates as a "digital basement" where ideas are continuously generated, refined, and improved through autonomous agent collaboration.
+
+Dreamcatcher is an autonomous AI-powered idea factory that captures, processes, and evolves ideas through a sophisticated multi-agent system. The system is designed to never let a great idea slip away and continuously improve itself through autonomous evolution.
 
 ### Core Philosophy
-- **"The basement never sleeps"** - 24/7 autonomous operation
-- **Agent-driven evolution** - Self-improving AI agents that analyze and rewrite code
-- **Instant idea capture** - Mobile-first PWA for capturing fleeting thoughts
-- **Collaborative intelligence** - 7 specialized agents working together
+- **Instant capture** with zero friction
+- **AI-powered processing** through specialized agents
+- **Autonomous evolution** - the system improves itself while you sleep
+- **Mobile-first PWA** for ubiquitous access
+- **Agent personalities** - each AI has its own character and expertise
 
-## Architecture
+## Architecture Overview
 
-### Tech Stack
-- **Backend**: FastAPI (Python 3.11+), PostgreSQL, Redis
-- **Frontend**: React + TypeScript, Vite, TailwindCSS, PWA
-- **AI Integration**: Claude AI, OpenAI, ComfyUI for visual generation
-- **Deployment**: Docker Compose, Nginx reverse proxy
-- **Agent System**: Async message-based communication
+### Backend (FastAPI + Python)
+- **Multi-agent system** with 7 specialized AI agents
+- **Autonomous evolution** through Meta Agent with Claude AI integration
+- **PostgreSQL database** for persistent storage
+- **Redis** for agent communication and caching
+- **WebSocket support** for real-time updates
+- **ComfyUI integration** for visual generation
 
-### Key Components
-1. **Agent System** (`backend/agents/`) - 7 specialized AI agents
-2. **API Layer** (`backend/api/`) - RESTful endpoints + WebSocket
-3. **Database** (`backend/database/`) - PostgreSQL with SQLAlchemy
-4. **Frontend** (`frontend/`) - React PWA with offline support
-5. **Evolution System** (`backend/services/evolution_service.py`) - Self-improvement core
+### Frontend (React + TypeScript PWA)
+- **Progressive Web App** with offline capabilities
+- **Mobile-first design** with Tailwind CSS
+- **Real-time updates** via WebSocket
+- **Voice capture** and transcription
+- **Offline-first** with IndexedDB storage
 
-## Development Setup
+### AI Services
+- **Claude AI** for creative expansion and code evolution
+- **GPT models** for structured analysis
+- **Whisper** for voice transcription
+- **ComfyUI** for visual generation
 
-### Quick Start
-```bash
-# Clone and start
-git clone <repo>
-cd Dreamcatcher
-./scripts/start.sh
+## Directory Structure
 
-# Or manual Docker setup
-docker-compose -f docker/docker-compose.yml up -d
+```
+/home/mark/Dreamcatcher/
+├── backend/
+│   ├── agents/                    # AI agent implementations
+│   │   ├── agent_listener.py      # Input capture agent
+│   │   ├── agent_classifier.py    # Categorization agent
+│   │   ├── agent_expander.py      # Idea expansion agent
+│   │   ├── agent_visualizer.py    # Visual generation agent
+│   │   ├── agent_proposer.py      # Proposal generation agent
+│   │   ├── agent_reviewer.py      # Review and resurrection agent
+│   │   ├── agent_meta.py          # Self-improvement agent
+│   │   └── base_agent.py          # Base agent class
+│   ├── api/                       # API endpoints
+│   │   └── routes.py              # All API routes
+│   ├── database/                  # Database layer
+│   │   ├── crud.py                # Database operations
+│   │   ├── models.py              # SQLAlchemy models
+│   │   └── database.py            # Database setup
+│   ├── services/                  # Core services
+│   │   ├── ai_service.py          # AI model integrations
+│   │   ├── audio_service.py       # Audio processing
+│   │   ├── comfy_service.py       # ComfyUI integration
+│   │   └── evolution_service.py   # Evolution orchestration
+│   ├── scheduler/                 # Task scheduling
+│   │   └── evolution_scheduler.py # 24/7 evolution scheduler
+│   ├── tests/                     # Test suite
+│   │   ├── conftest.py            # Test fixtures
+│   │   ├── test_agents.py         # Agent tests
+│   │   ├── test_api.py            # API tests
+│   │   └── test_database.py       # Database tests
+│   ├── main.py                    # FastAPI application
+│   └── requirements.txt           # Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── components/            # React components
+│   │   ├── pages/                 # Page components
+│   │   ├── services/              # API services
+│   │   ├── stores/                # Zustand state management
+│   │   └── utils/                 # Utility functions
+│   ├── public/                    # Static assets
+│   ├── package.json               # Node.js dependencies
+│   └── vite.config.ts             # Vite configuration
+├── .github/workflows/             # CI/CD pipelines
+│   ├── ci.yml                     # Continuous integration
+│   └── deploy.yml                 # Deployment workflow
+├── docs/                          # Documentation
+│   ├── AGENTS.md                  # Agent documentation
+│   ├── API.md                     # API documentation
+│   └── DEPLOYMENT.md              # Deployment guide
+├── docker-compose.yml             # Docker services
+└── CLAUDE.md                      # This file
 ```
 
-### Environment Variables
-Required in `.env`:
-```
-ANTHROPIC_API_KEY=your_claude_key
-OPENAI_API_KEY=your_openai_key
-DB_PASSWORD=secure_password
-SECRET_KEY=your_secret_key
-COMFY_API_URL=http://localhost:8188
-```
+## Agent System
 
-### Development Commands
-```bash
-# Backend
-cd backend
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+### 1. Listener Agent (`agent_listener.py`)
+**Personality**: *"I heard something. Logging it now."*
+- Captures voice, text, dreams, and images
+- Whisper integration for transcription
+- Instant idea storage
+- Auto-tagging based on content
+- Urgency scoring
 
-# Frontend
-cd frontend
-npm run dev          # Development server
-npm run build        # Production build
-npm run lint         # ESLint
-npm run type-check   # TypeScript checking
+### 2. Classifier Agent (`agent_classifier.py`)
+**Personality**: *"I'm not saying this is another ADHD thought spiral, but... yeah it is. Categorized under 'You Might Actually Build This.'"*
+- AI-powered categorization (creative, business, technical, personal, metaphysical)
+- Urgency and novelty scoring
+- Duplicate detection
+- Tag generation
 
-# Docker
-docker-compose -f docker/docker-compose.yml up -d    # Start all services
-docker-compose -f docker/docker-compose.yml down    # Stop services
-docker-compose -f docker/docker-compose.yml logs -f # View logs
-```
+### 3. Expander Agent (`agent_expander.py`)
+**Personality**: *"Let me take that spark and turn it into a full flame."*
+- Claude integration for creative expansion
+- Category-specific expansion strategies
+- Multiple perspective generation
+- Cross-pollination with existing ideas
 
-## Agent System (Core Feature)
+### 4. Visualizer Agent (`agent_visualizer.py`)
+**Personality**: *"Darling, that idea needs a visual. Let me handle it."*
+- ComfyUI workflow generation
+- Style-aware prompt engineering
+- Multiple visual variations
+- Category-specific visual styles
 
-### The 7 Agents
-1. **Idea Catalyst** - Generates and refines ideas
-2. **Concept Mapper** - Creates visual mind maps
-3. **Research Hound** - Gathers information and context
-4. **Prototype Builder** - Creates mockups and prototypes
-5. **Reality Checker** - Validates feasibility and market fit
-6. **Storyteller** - Crafts compelling narratives
-7. **Meta Agent** - Self-improvement and evolution (NEW)
+### 5. Proposer Agent (`agent_proposer.py`)
+**Personality**: *"Proposal generated. Here's a structured plan with bullet points, deadlines, and passive income streams."*
+- 8-criteria viability analysis
+- Structured proposal generation
+- Timeline and milestone planning
+- Success metrics definition
 
-### Agent Communication
-- **Message-based**: Async queue system via Redis
-- **Base class**: `backend/agents/base_agent.py`
-- **Registry**: `backend/agents/agent_registry.py`
-- **Performance tracking**: Built-in metrics and logging
+### 6. Reviewer Agent (`agent_reviewer.py`)
+**Personality**: *"Time to revisit a hidden gem from your archives."*
+- Scheduled idea reviews
+- Serendipitous idea resurrection
+- Context-aware reassessment
 
-## Self-Improvement System (Critical Feature)
-
-### Evolution Service (`backend/services/evolution_service.py`)
-- **Automated code analysis** using Claude AI
-- **5 evolution strategies**: Performance, error reduction, features, quality, coordination
-- **Safe backup/rollback** mechanism
-- **Performance trend analysis**
-
-### Evolution Scheduler (`backend/scheduler/evolution_scheduler.py`)
-- **24/7 autonomous operation**
-- **Configurable evolution intervals** (default: 4 hours)
-- **Health monitoring** every 30 minutes
-- **Emergency evolution** when health < 30%
-
-### Evolution API (`backend/api/evolution.py`)
-```python
-GET /api/evolution/status     # Current evolution status
-POST /api/evolution/trigger   # Manual evolution trigger
-POST /api/evolution/rollback  # Rollback to previous version
-GET /api/evolution/metrics    # Performance metrics
-```
+### 7. Meta Agent (`agent_meta.py`)
+**Personality**: *"I analyze. I evolve. I make us better while you sleep."*
+- **CRITICAL**: Autonomous system evolution
+- Performance analysis and health scoring
+- Claude AI integration for code rewriting
+- Safe backup and rollback mechanisms
+- 24/7 evolution scheduling
 
 ## Database Schema
 
-### Key Tables
-- `ideas` - Core idea storage with metadata
-- `agents` - Agent registration and configuration
-- `agent_activities` - Activity logging and performance
-- `agent_messages` - Inter-agent communication
-- `evolution_cycles` - Self-improvement history
+### Core Tables
+- `ideas` - Main idea storage
+- `idea_expansions` - AI-generated expansions
+- `idea_visualizations` - Generated visuals
+- `idea_proposals` - Structured proposals
+- `tags` - Categorization tags
+- `agents` - Agent registry
+- `agent_logs` - Agent activity logs
+- `system_metrics` - Performance metrics
 
-### Database Access
-```python
-from backend.database import get_db, IdeaCRUD, AgentCRUD
+### Key Relationships
+- Ideas → Expansions (1:many)
+- Ideas → Visualizations (1:many)
+- Ideas → Proposals (1:many)
+- Ideas → Tags (many:many)
 
-with get_db() as db:
-    ideas = IdeaCRUD.get_all_ideas(db)
-    agents = AgentCRUD.get_all_agents(db)
+## Development Setup
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+
+- Docker & Docker Compose
+
+### Environment Variables
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/dreamcatcher
+
+# AI Services
+ANTHROPIC_API_KEY=your_claude_key
+OPENAI_API_KEY=your_openai_key
+
+# ComfyUI
+COMFYUI_URL=http://localhost:8188
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Security
+SECRET_KEY=your_secret_key
 ```
+
+### Quick Start
+```bash
+# Clone and setup
+git clone <repo>
+cd Dreamcatcher
+
+# Backend setup
+cd backend
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+
+# Frontend setup
+cd frontend
+npm install
+npm run dev
+
+# Start services
+docker-compose up -d postgres redis
+```
+
+### Testing
+```bash
+# Backend tests
+cd backend
+pytest
+
+# Frontend tests
+cd frontend
+npm test
+
+# CI/CD tests
+git push origin main  # Triggers GitHub Actions
+```
+
+## Key Features
+
+### Autonomous Evolution
+- **24/7 operation**: Meta Agent continuously monitors and improves the system
+- **Claude AI integration**: Uses Claude for intelligent code rewriting
+- **Safe evolution**: Automatic backups and rollback capabilities
+- **Performance monitoring**: Real-time health scoring and metrics
+- **Emergency triggers**: Automatic evolution when health drops below 30%
+
+### Multi-Agent Processing Pipeline
+```
+Input → Listener → Classifier → Expander → Visualizer → Proposer → Storage
+                                    ↓
+                               Reviewer (scheduled)
+                                    ↓
+                            Meta Agent (evolution)
+```
+
+### Evolution Scheduler (`backend/scheduler/evolution_scheduler.py`)
+- **Daily evolution cycles**: Automatic system improvements every 24 hours
+- **Health monitoring**: System health checks every 30 minutes
+- **Emergency evolution**: Triggered when system health < 30%
+- **Performance tracking**: Comprehensive metrics and trending
+
+### Production Features
+- **Comprehensive error handling**: Custom exception classes throughout
+- **Retry logic**: Exponential backoff for external services
+- **Rate limiting**: Built-in API rate limiting
+- **Monitoring**: Full system metrics and alerting
+- **Security**: Input validation and sanitization
 
 ## API Endpoints
 
-### Core Endpoints
-- `GET /` - System status and info
-- `GET /api/health` - Health check
-- `GET /api/ideas` - List ideas
+### Ideas
+- `GET /api/ideas` - List ideas with filtering
 - `POST /api/ideas` - Create new idea
-- `GET /api/agents` - List agents
+- `GET /api/ideas/{id}` - Get specific idea
+- `PUT /api/ideas/{id}` - Update idea
+- `DELETE /api/ideas/{id}` - Delete idea
+- `POST /api/ideas/{id}/archive` - Archive idea
+- `POST /api/ideas/{id}/expand` - Trigger expansion
+
+### Agents
+- `GET /api/agents` - List all agents
+- `GET /api/agents/{id}/status` - Agent health check
 - `POST /api/agents/{id}/message` - Send message to agent
+- `GET /api/agents/{id}/logs` - Agent activity logs
 
-### WebSocket (`/ws`)
-- Real-time updates for frontend
-- Agent activity notifications
-- Evolution progress updates
+### Evolution
+- `GET /api/evolution/status` - Evolution system status
+- `POST /api/evolution/trigger` - Force evolution cycle
+- `GET /api/evolution/history` - Evolution history
+- `GET /api/evolution/health` - System health metrics
 
-## Frontend Architecture
+### WebSocket
+- `/ws/ideas` - Real-time idea updates
+- `/ws/agents` - Agent status updates
+- `/ws/evolution` - Evolution progress updates
 
-### Key Components
-- `src/components/IdeaCapture.tsx` - Main idea input
-- `src/components/AgentStatus.tsx` - Agent monitoring
-- `src/components/Navbar.tsx` - Navigation with logo
-- `src/pages/HomePage.tsx` - Main dashboard
+## CI/CD Pipeline
 
-### State Management
-- **Zustand** for global state
-- **Offline support** with IndexedDB
-- **Real-time updates** via WebSocket
+### GitHub Actions Workflows
+- **CI Pipeline** (`.github/workflows/ci.yml`):
+  - Backend tests with pytest
+  - Frontend tests with vitest
+  - Code quality checks with ESLint
+  - Security scanning with bandit
+  - Integration tests
+  - Type checking
 
-### PWA Features
-- **Service Worker** for offline functionality
-- **App manifest** for mobile installation
-- **Push notifications** for agent updates
+- **Deploy Pipeline** (`.github/workflows/deploy.yml`):
+  - Docker image building
+  - Environment-specific deployments
+  - Health checks and rollback support
+  - Staging and production environments
 
-## Common Development Patterns
+### Testing Strategy
+- **Unit tests**: Individual component testing
+- **Integration tests**: API and database testing
+- **End-to-end tests**: Full workflow testing
+- **Performance tests**: Load and stress testing
 
-### Adding New Agents
-1. Extend `BaseAgent` class
-2. Implement `process()` method
-3. Register in `agent_registry`
-4. Add to database migrations
+## Evolution System Details
 
-### Creating API Endpoints
-1. Add to `backend/api/` directory
-2. Include router in `main.py`
-3. Add CRUD operations in `database/`
-4. Update OpenAPI documentation
+### Meta Agent Capabilities
+- **System Analysis**: Comprehensive performance and health assessment
+- **Improvement Identification**: Automated detection of optimization opportunities
+- **Code Evolution**: Claude AI-powered code rewriting and improvements
+- **Safe Deployment**: Backup, validate, apply, monitor workflow
+- **Rollback Support**: Automatic rollback on failures
 
-### Frontend Development
-1. Use TypeScript for all components
-2. Follow existing component patterns
-3. Implement responsive design with Tailwind
-4. Add proper error boundaries
+### Evolution Strategies
+1. **Performance Optimization**: Async improvements, caching, algorithms
+2. **Error Reduction**: Exception handling, validation, recovery
+3. **Feature Enhancement**: New capabilities and improvements
+4. **Code Quality**: Refactoring, documentation, best practices
+5. **Agent Coordination**: Communication and workflow optimization
 
-## Testing
-
-### Backend Tests
-```bash
-cd backend
-python -m pytest tests/
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm run test
-```
-
-### Integration Tests
-- API endpoint testing with FastAPI TestClient
-- Agent communication testing
-- Database integration testing
+### Safety Mechanisms
+- Automatic backups before changes
+- Code validation and syntax checking
+- Rollback capabilities for failed improvements
+- Emergency stop controls
+- Performance monitoring and alerts
 
 ## Deployment
 
-### Production Setup
+### Docker Deployment
 ```bash
 # Build and deploy
-docker-compose -f docker/docker-compose.yml up -d
+docker-compose -f docker-compose.prod.yml up -d
 
-# Check services
-curl http://localhost:8000/api/health
-curl http://localhost:3000
+# Monitor logs
+docker-compose logs -f app
+
+# Health check
+curl http://localhost:8000/health
 ```
 
-### Monitoring
-- **Logs**: `docker-compose logs -f`
-- **Metrics**: `/api/evolution/metrics`
-- **Health**: `/api/health`
+### Environment Configuration
+- **Development**: Local development with hot reload
+- **Staging**: Pre-production testing environment
+- **Production**: Full production deployment with monitoring
 
-## Key Files to Understand
+## Monitoring and Observability
 
-### Backend Core
-- `backend/main.py` - FastAPI application setup
-- `backend/database/models.py` - Database models
-- `backend/agents/base_agent.py` - Agent base class
-- `backend/services/evolution_service.py` - Self-improvement logic
+### System Metrics
+- Agent performance and error rates
+- Response times and throughput
+- Evolution cycle success rates
+- System health scores
+- Resource utilization
 
-### Frontend Core
-- `frontend/src/App.tsx` - Main React app
-- `frontend/src/stores/` - State management
-- `frontend/vite.config.ts` - Build configuration
+### Logging
+- Structured JSON logging
+- Agent activity logs
+- Evolution history
+- Error tracking and alerting
 
-### Configuration
-- `docker/docker-compose.yml` - Service orchestration
-- `backend/requirements.txt` - Python dependencies
-- `frontend/package.json` - Node.js dependencies
+### Health Checks
+- Agent health monitoring
+- Database connectivity
+- External service availability
+- System resource usage
 
-## Security Considerations
+## Security
 
-### API Security
-- **CORS** configured for development
-- **Input validation** on all endpoints
-- **Secret management** via environment variables
-- **Rate limiting** on critical endpoints
+### Authentication
+- JWT-based authentication
+- Role-based access control
+- API key management
+- Session management
 
-### Agent Security
-- **Sandboxed execution** for code generation
-- **Safe backup mechanism** for evolution
-- **Error handling** prevents system crashes
-- **Logging** for audit trails
+### Data Protection
+- Input validation and sanitization
+- SQL injection prevention
+- XSS protection
+- Secure API endpoints
+
+### Secrets Management
+- Environment variable configuration
+- API key rotation
+- Secure credential storage
 
 ## Performance Optimization
 
-### Backend
-- **Async processing** for all agents
-- **Database connection pooling**
-- **Redis caching** for frequent queries
-- **Background tasks** for heavy operations
+### Backend Optimizations
+- Async/await throughout
+- Connection pooling
+- Query optimization
+- Caching with Redis
 
-### Frontend
-- **Code splitting** with Vite
-- **Lazy loading** for components
-- **Service Worker** for caching
-- **Optimized bundle size**
+### Frontend Optimizations
+- Code splitting
+- Lazy loading
+- Service worker caching
+- Offline capabilities
+
+### Database Optimizations
+- Proper indexing
+- Query optimization
+- Connection pooling
+- Read replicas (future)
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Agent not starting**: Check Redis connection
-2. **Database errors**: Verify PostgreSQL is running
-3. **API timeouts**: Check Claude AI API limits
-4. **Frontend build fails**: Clear node_modules and reinstall
+1. **Agent not responding**: Check agent logs and health status
+2. **Evolution failures**: Review evolution history and rollback if needed
+3. **Database connection issues**: Verify PostgreSQL and connection string
+4. **AI service timeouts**: Check API keys and service availability
 
 ### Debug Commands
 ```bash
-# View service logs
-docker-compose -f docker/docker-compose.yml logs backend
-docker-compose -f docker/docker-compose.yml logs frontend
+# Check agent status
+curl http://localhost:8000/api/agents/meta/status
 
-# Check service health
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/agents
+# Force evolution
+curl -X POST http://localhost:8000/api/evolution/trigger
 
-# Database connection
-docker exec -it dreamcatcher-db psql -U dreamcatcher -d dreamcatcher
+# View system health
+curl http://localhost:8000/api/evolution/health
+
+# Check logs
+docker-compose logs -f app
 ```
 
-## Next Steps for Development
+## Important Notes for Claude Code
 
-### High Priority
-1. **Agent coordination improvements**
-2. **Evolution strategy optimization**
-3. **Real-time collaboration features**
-4. **Mobile app optimization**
-
-### Future Enhancements
-1. **Multi-user support**
-2. **Advanced AI model integration**
-3. **Export/import functionality**
-4. **Analytics dashboard**
-
-## Important Notes
-
-### Code Style
-- **Python**: PEP 8 compliance, type hints
-- **TypeScript**: Strict mode, proper interfaces
-- **No comments** unless absolutely necessary
-- **Consistent naming**: snake_case (Python), camelCase (TS)
+### Critical Systems
+- **Never disable the Meta Agent**: It's responsible for system evolution
+- **Evolution scheduler is crucial**: Runs 24/7 for continuous improvement
+- **Always backup before changes**: The system has built-in backup mechanisms
+- **Monitor evolution logs**: Check `/home/mark/Dreamcatcher/logs/evolution.log`
 
 ### Development Workflow
-1. **Always read existing code** before making changes
-2. **Follow established patterns** in the codebase
-3. **Test thoroughly** before committing
-4. **Use the TodoWrite tool** for task management
-5. **Check linting** before final commit
+1. **Run tests first**: `pytest` in backend, `npm test` in frontend
+2. **Check CI/CD**: GitHub Actions must pass before deployment
+3. **Monitor system health**: Use `/api/evolution/health` endpoint
+4. **Evolution safety**: System can rollback failed improvements automatically
 
-### Self-Improvement System
-- **Monitor evolution cycles** regularly
-- **Review performance metrics** after changes
-- **Use rollback** if issues arise
-- **Document evolution strategies** for future reference
+### Emergency Procedures
+- **System degradation**: Evolution will auto-trigger when health < 30%
+- **Agent failures**: Check agent logs and restart if needed
+- **Database issues**: Use backup and recovery procedures
+- **Evolution failures**: Rollback using Meta Agent rollback functionality
 
-This guide should help you quickly understand and contribute to the Dreamcatcher project. The system is designed to be self-improving, so expect continuous evolution and enhancement of capabilities.
+---
+
+*This system represents a living, breathing AI collective that continuously evolves to better serve the creative process. The Meta Agent ensures the entire system never stops improving, making it a truly autonomous idea factory.*
