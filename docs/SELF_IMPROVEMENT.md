@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../Dreamcatcher_logo.png" alt="Dreamcatcher Logo" width="150" />
+</div>
+
 # Dreamcatcher Self-Improvement System
 
 *"I analyze. I evolve. I make us better while you sleep."*

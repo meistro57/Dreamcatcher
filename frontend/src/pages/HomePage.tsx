@@ -57,8 +57,8 @@ const HomePage = () => {
       <div className="max-w-4xl mx-auto pt-8 pb-24">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-20 h-20 bg-gradient-to-r from-primary-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Zap className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6">
+            <img src="/Dreamcatcher_logo.png" alt="Dreamcatcher Logo" className="w-20 h-20 object-contain filter invert" />
           </div>
           
           <h1 className="text-4xl font-bold text-gradient mb-4">

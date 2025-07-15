@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../Dreamcatcher_logo.png" alt="Dreamcatcher Logo" width="150" />
+</div>
+
 # Dreamcatcher Architecture
 
 *The technical blueprint for your AI-powered idea factory*

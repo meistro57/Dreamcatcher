@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="Dreamcatcher_logo.png" alt="Dreamcatcher Logo" width="150" />
+</div>
+
 # Dreamcatcher Deployment Guide
 
 *From idea to reality - set up your personal AI idea factory*

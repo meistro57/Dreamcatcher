@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="Dreamcatcher_logo.png" alt="Dreamcatcher Logo" width="200" />
+</div>
+
 # Dreamcatcher
 
 *"Catch it. Grow it. Build it. From spark to system—without losing a beat."*

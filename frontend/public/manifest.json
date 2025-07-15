@@ -1,0 +1,29 @@
+{
+  "name": "Dreamcatcher - AI-Powered Idea Factory",
+  "short_name": "Dreamcatcher",
+  "description": "Capture, analyze, and evolve your ideas with AI-powered agents that never sleep.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/Dreamcatcher_logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "lang": "en-US",
+  "scope": "/",
+  "screenshots": [
+    {
+      "src": "/Dreamcatcher_logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}

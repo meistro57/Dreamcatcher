@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/Dreamcatcher_logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- PWA Meta Tags -->
@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="Dreamcatcher" />
     
     <!-- PWA Icons -->
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" href="/Dreamcatcher_logo.png" />
     <link rel="manifest" href="/manifest.json" />
     
     <!-- Preload critical resources -->
@@ -26,13 +26,13 @@
     <meta property="og:title" content="Dreamcatcher - AI-Powered Idea Factory" />
     <meta property="og:description" content="Capture, analyze, and evolve your ideas with AI-powered agents that never sleep." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta property="og:image" content="/Dreamcatcher_logo.png" />
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Dreamcatcher - AI-Powered Idea Factory" />
     <meta name="twitter:description" content="Capture, analyze, and evolve your ideas with AI-powered agents that never sleep." />
-    <meta name="twitter:image" content="/pwa-512x512.png" />
+    <meta name="twitter:image" content="/Dreamcatcher_logo.png" />
     
     <!-- Prevent zoom on mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -86,10 +86,8 @@
       }
       
       .logo-container {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #1e40af, #7c3aed);
-        border-radius: 12px;
+        width: 80px;
+        height: 80px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -97,9 +95,10 @@
       }
       
       .logo-icon {
-        width: 30px;
-        height: 30px;
-        color: white;
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+        filter: invert(1);
       }
     </style>
   </head>
@@ -107,9 +106,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
       <div class="logo-container">
-        <svg class="logo-icon" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-        </svg>
+        <img src="/Dreamcatcher_logo.png" alt="Dreamcatcher Logo" class="logo-icon" />
       </div>
       <div class="loading-spinner"></div>
       <div class="loading-text">Loading Dreamcatcher...</div>

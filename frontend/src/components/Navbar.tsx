@@ -33,8 +33,8 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img src="/Dreamcatcher_logo.png" alt="Dreamcatcher Logo" className="w-8 h-8 object-contain filter invert" />
             </div>
             <span className="text-xl font-bold text-gradient">Dreamcatcher</span>
           </Link>
