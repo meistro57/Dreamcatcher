@@ -179,8 +179,11 @@ const SettingsPage = () => {
             </div>
           </div>
         </div>
+        )}
         
-        {/* Notifications Settings */}
+        {activeTab === 'notifications' && (
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+          {/* Notifications Settings */}
         <div className="card p-8 mb-8">
           <div className="flex items-center space-x-3 mb-6">
             <Bell className="w-6 h-6 text-primary-500" />
@@ -313,6 +316,8 @@ const SettingsPage = () => {
             </button>
           </div>
         </div>
+        </div>
+        )}
       </div>
     </div>
   )
