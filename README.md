@@ -10,7 +10,7 @@ Because it took me three tries just to get this idea to the AI who's going to bu
 
 ## Core Concept
 
-A 24/7 basement-hosted system that:
+A 24/7 self-hosted system that:
 - Captures raw creative energy the moment it strikes
 - Uses AI agents to refine, connect, and expand ideas
 - Generates visuals through ComfyUI integration
@@ -40,7 +40,7 @@ A 24/7 basement-hosted system that:
 - **AI Integration**: Claude, GPT, local models
 - **Voice**: Whisper for transcription
 - **Images**: ComfyUI for visual generation
-- **Deployment**: Docker on unitthirty2.com
+- **Deployment**: Docker containerized deployment
 
 ## Project Structure
 
@@ -63,11 +63,40 @@ dreamcatcher/
 
 ## Getting Started
 
-1. Clone the repository
-2. Set up environment variables
-3. Start with Docker Compose
-4. Configure AI API keys
-5. Begin capturing ideas
+### Quick Deploy
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/dreamcatcher.git
+   cd dreamcatcher
+   ```
+
+2. **Set your domain**
+   ```bash
+   export DOMAIN="yourdomain.com"
+   export SUBDOMAIN="dreamcatcher"
+   export EMAIL="admin@yourdomain.com"
+   ```
+
+3. **Deploy with one command**
+   ```bash
+   sudo ./deploy.sh
+   ```
+
+4. **Configure API keys**
+   ```bash
+   nano .env
+   # Add your ANTHROPIC_API_KEY and OPENAI_API_KEY
+   ```
+
+5. **Start capturing ideas**
+   - Visit `https://dreamcatcher.yourdomain.com`
+   - Hit the voice button and speak your idea
+   - Watch the AI agents process it in real-time
+
+### Manual Setup
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
 
 ## Features
 
@@ -78,12 +107,19 @@ dreamcatcher/
 - **Project Tracking**: From idea to implementation
 - **Scheduled Reviews**: Resurrect forgotten brilliance
 
+## Documentation
+
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical system design
+- **[API Reference](docs/API.md)** - Complete API documentation
+- **[Agent System](docs/AGENTS.md)** - AI personalities and capabilities
+- **[Deployment Guide](DEPLOYMENT.md)** - Setup and configuration
+
 ## Status
 
-🚧 **In Development** - Phase 1: Foundation
+✅ **Ready for Deployment** - Full system implementation complete
 
 The creative system you never had growing up—now designed for the way your mind actually works.
 
 ---
 
-*Built with Claude Code • Hosted in the basement • Powered by midnight inspiration*
+*Built with Claude Code • Self-hosted anywhere • Powered by midnight inspiration*

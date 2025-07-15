@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-DOMAIN=${DOMAIN:-"unitthirty2.com"}
+DOMAIN=${DOMAIN:-"yourdomain.com"}
 SUBDOMAIN=${SUBDOMAIN:-"dreamcatcher"}
 FULL_DOMAIN="${SUBDOMAIN}.${DOMAIN}"
 EMAIL=${EMAIL:-"admin@${DOMAIN}"}

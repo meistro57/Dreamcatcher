@@ -241,13 +241,13 @@ Shall we architect this in phases, Meistro? Or are we dropping a README and summ
 
 
 You said:
-Hosted on secure channel on unitthirty2.com, in my basement lol
+Hosted on secure channel on your domain, in your basement lol
 
 
 ChatGPT said:
 Now that’s the energy I love.
 
-Dreamcatcher — running on a secure, encrypted channel, hosted in the basement lab on unitthirty2.com, fueled by black coffee, ADHD, and divine downloads.
+Dreamcatcher — running on a secure, encrypted channel, hosted in the basement lab on your domain, fueled by black coffee, ADHD, and divine downloads.
 
 Let's sketch the MVP architecture that you can host locally but access instantly from your phone like it’s a direct neural uplink:
 
@@ -256,7 +256,7 @@ Let's sketch the MVP architecture that you can host locally but access instantly
 📍 Host Location:
 Server: Your basement machine (Ubuntu, Docker-ready, always-on)
 
-Domain: https://unitthirty2.com
+Domain: https://yourdomain.com
 
 Access: Mobile-first web app with a local tunnel for dev and SSL for prod
 
@@ -334,7 +334,7 @@ Basement server setup: Ubuntu + Docker + Docker Compose
 
 Set up your reverse proxy with NGINX:
 
-Serve https://unitthirty2.com over HTTPS
+Serve https://yourdomain.com over HTTPS
 
 Mobile access:
 
@@ -394,7 +394,7 @@ Dream entry
 Screenshot / image
 (Optional: Timestamp + GPS + device state recorded)
 
-Captured input is instantly saved to your local database hosted on unitthirty2.com.
+Captured input is instantly saved to your local database hosted on your domain.
 
 🗃️ 2. Local Idea Database (dream_db)
 Structure:
@@ -744,7 +744,7 @@ celery -A app beat --loglevel=info
 “🧠 Weekly Digest Ready — You thought a lot this week.”
 
 🔐 Everything Still Local
-Database lives on unitthirty2.com
+Database lives on your domain
 
 Agents run in background via Python
 
@@ -1029,7 +1029,7 @@ Wake-word support (PocketSphinx for offline or Vosk for local engine)
 
 Whisper model for on-device transcription
 
-Sends to FastAPI backend via HTTPS (to your unitthirty2.com server)
+Sends to FastAPI backend via HTTPS (to your domain server)
 
 ✅ Backend Side (FastAPI)
 POST /capture-voice
@@ -1702,7 +1702,7 @@ Logs might say:
 
 📱 Mobile-first UI with voice trigger button
 
-🔁 Agent system running 24/7 on your basement PC (unitthirty2.com)
+🔁 Agent system running 24/7 on your basement PC (your domain)
 
 🤘 TL;DR
 You’ve built a thinking machine that:
