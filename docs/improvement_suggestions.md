@@ -52,5 +52,32 @@ if not force and not analysis_result.get("evolution_needed", False):
     }
 ```
 This preserves the agent-driven recommendations while preventing unnecessary self-modification cycles. |
+| `EvolutionService` calls `AgentMeta.process` during both analysis and validation, but `AgentMeta.process` always proceeds to execute improvements regardless of the requested `type`. This means the analysis phase already mutates agent code, and the later improvement stage repeats the process (and validation does it yet again), compounding risk and double-writing files. 【F:backend/agents/agent_meta.py†L80-L118】【F:backend/services/evolution_service.py†L93-L191】 | Split analysis from mutation by adding an explicit branch in `AgentMeta.process` (or a dedicated `analyze_only` coroutine) that returns metrics without invoking `_execute_improvement`. For example: <br><br>```python
+async def process(self, data: dict[str, Any]) -> dict[str, Any]:
+    improvement_type = data.get("type", "performance_optimization")
+    analysis = await self._analyze_system_state()
+    if not analysis:
+        return {"success": False, "error": "Failed to analyze system state"}
+    if improvement_type == "system_analysis":
+        opportunities = await self._identify_opportunities(analysis, data.get("agent_id"))
+        return {"success": True, "analysis": analysis, "opportunities": opportunities}
+    # fall through to existing improvement execution logic
+```
+Then, let `EvolutionService._analyze_system` consume that new analysis-only path and reserve the mutating call for `_apply_improvements`, ensuring each phase performs its intended responsibility once. |
+| `_get_resource_usage` polls `psutil.cpu_percent(interval=1)` and enumerates all process IDs inline, which blocks the event loop for a full second every time system analysis runs and scales poorly on busy hosts. 【F:backend/agents/agent_meta.py†L264-L275】 | Offload the resource probe to a worker thread or use non-blocking sampling. One pragmatic tweak is:<br><br>```python
+async def _get_resource_usage(self) -> dict[str, Any]:
+    def snapshot() -> dict[str, Any]:
+        import psutil
+        return {
+            "cpu_percent": psutil.cpu_percent(interval=None),
+            "memory_percent": psutil.virtual_memory().percent,
+            "disk_percent": psutil.disk_usage("/").percent,
+            "process_count": len(psutil.pids()),
+        }
+    snapshot_data = await asyncio.to_thread(snapshot)
+    snapshot_data["timestamp"] = datetime.now().isoformat()
+    return snapshot_data
+```
+This keeps cooperative scheduling snappy while still reporting accurate utilisation figures. |
 
 Each recommendation is intentionally modular so you can adopt them incrementally without destabilising the running system.
