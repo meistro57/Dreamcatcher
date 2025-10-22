@@ -3,7 +3,7 @@ import json
 from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 
-from ..database import IdeaCRUD, AgentCRUD
+from database import IdeaCRUD, AgentCRUD
 
 class TestHealthEndpoint:
     """Test cases for health check endpoint."""

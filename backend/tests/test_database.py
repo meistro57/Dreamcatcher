@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
-from ..database import IdeaCRUD, AgentCRUD, SystemMetricsCRUD, models
+from database import IdeaCRUD, AgentCRUD, SystemMetricsCRUD, models
 
 class TestIdeaCRUD:
     """Test cases for IdeaCRUD operations."""

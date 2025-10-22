@@ -3,9 +3,9 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime
 
-from ..agents.base_agent import BaseAgent, AgentRegistry, AgentMessage
-from ..agents.agent_classifier import AgentClassifier
-from ..agents.agent_listener import AgentListener
+from agents.base_agent import BaseAgent, AgentRegistry, AgentMessage
+from agents.agent_classifier import AgentClassifier
+from agents.agent_listener import AgentListener
 
 class TestBaseAgent:
     """Test cases for BaseAgent functionality."""

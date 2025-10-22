@@ -6,14 +6,31 @@ Handles vector embeddings for idea content using sentence-transformers
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any
-from sentence_transformers import SentenceTransformer
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
-import torch
 
-from ..database.models import Idea
-from ..database.database import SessionLocal
+try:  # pragma: no cover - optional dependency
+    from sklearn.metrics.pairwise import cosine_similarity
+except ImportError:  # pragma: no cover
+    cosine_similarity = None
+
+try:  # pragma: no cover - optional heavy dependency
+    from sentence_transformers import SentenceTransformer
+except ImportError:  # pragma: no cover
+    SentenceTransformer = None
+
+try:  # pragma: no cover - optional GPU dependency
+    import torch
+except ImportError:  # pragma: no cover
+    torch = None
+
+try:  # pragma: no cover
+    from ..database.models import Idea
+    from ..database.database import SessionLocal
+except ImportError:  # pragma: no cover
+    from database.models import Idea
+    from database.database import SessionLocal
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -36,12 +53,18 @@ class EmbeddingService:
     
     def _load_model(self):
         """Load the sentence transformer model"""
+        if SentenceTransformer is None:
+            logger.warning(
+                "sentence-transformers is not installed; semantic embeddings will use mocks in tests"
+            )
+            return
+
         try:
             self.model = SentenceTransformer(self.model_name)
             logger.info(f"Loaded embedding model: {self.model_name}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
-            raise
+            self.model = None
     
     async def generate_embedding(self, text: str) -> List[float]:
         """
@@ -111,7 +134,13 @@ class EmbeddingService:
             emb2 = np.array(embedding2).reshape(1, -1)
             
             # Calculate cosine similarity
-            similarity = cosine_similarity(emb1, emb2)[0][0]
+            if cosine_similarity is not None:
+                similarity = cosine_similarity(emb1, emb2)[0][0]
+            else:
+                norm_product = np.linalg.norm(emb1) * np.linalg.norm(emb2)
+                if norm_product == 0:
+                    return 0.0
+                similarity = float(np.dot(emb1, emb2.T) / norm_product)
             
             # Convert to 0-1 range (cosine similarity is -1 to 1)
             return (similarity + 1) / 2

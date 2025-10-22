@@ -5,8 +5,12 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 
-from ..database import get_db, SystemMetricsCRUD
-from ..agents.agent_meta import AgentMeta
+try:  # pragma: no cover
+    from ..database import get_db, SystemMetricsCRUD
+    from ..agents.agent_meta import AgentMeta
+except ImportError:  # pragma: no cover
+    from database import get_db, SystemMetricsCRUD
+    from agents.agent_meta import AgentMeta
 
 class EvolutionService:
     """

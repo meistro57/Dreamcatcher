@@ -6,7 +6,10 @@ import json
 import logging
 from dataclasses import dataclass
 
-from ..database import get_db, AgentCRUD
+try:  # pragma: no cover
+    from ..database import get_db, AgentCRUD
+except ImportError:  # pragma: no cover
+    from database import get_db, AgentCRUD
 
 @dataclass
 class AgentMessage:

@@ -3,15 +3,26 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from ..services.evolution_service import EvolutionService
-from ..models.evolution import (
-    EvolutionStatusResponse,
-    EvolutionCycleResponse,
-    EvolutionHistoryResponse,
-    EvolutionConfigRequest,
-    ForceEvolutionRequest,
-    RollbackRequest
-)
+try:  # pragma: no cover
+    from ..services.evolution_service import EvolutionService
+    from ..models.evolution import (
+        EvolutionStatusResponse,
+        EvolutionCycleResponse,
+        EvolutionHistoryResponse,
+        EvolutionConfigRequest,
+        ForceEvolutionRequest,
+        RollbackRequest
+    )
+except ImportError:  # pragma: no cover
+    from services.evolution_service import EvolutionService
+    from api.models import (
+        EvolutionStatusResponse,
+        EvolutionCycleResponse,
+        EvolutionHistoryResponse,
+        EvolutionConfigRequest,
+        ForceEvolutionRequest,
+        RollbackRequest
+    )
 
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 logger = logging.getLogger(__name__)

@@ -5,8 +5,13 @@ from datetime import datetime
 import json
 
 from .base_agent import BaseAgent
-from ..database import get_db, IdeaCRUD, TagCRUD
-from ..services.ai_service import AIService
+
+try:  # pragma: no cover
+    from ..database import get_db, IdeaCRUD, TagCRUD
+    from ..services.ai_service import AIService
+except ImportError:  # pragma: no cover
+    from database import get_db, IdeaCRUD, TagCRUD
+    from services.ai_service import AIService
 
 class AgentClassifier(BaseAgent):
     """
