@@ -2,13 +2,22 @@ import asyncio
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
-import whisper
 import tempfile
 import os
 
+try:  # pragma: no cover - heavy dependency, optional for tests
+    import whisper
+except ImportError:  # pragma: no cover
+    whisper = None
+
 from .base_agent import BaseAgent
-from ..database import get_db, IdeaCRUD, TagCRUD
-from ..services.audio_service import AudioProcessor
+
+try:  # pragma: no cover
+    from ..database import get_db, IdeaCRUD, TagCRUD
+    from ..services.audio_service import AudioProcessor
+except ImportError:  # pragma: no cover
+    from database import get_db, IdeaCRUD, TagCRUD
+    from services.audio_service import AudioProcessor
 
 class AgentListener(BaseAgent):
     """
@@ -33,6 +42,10 @@ class AgentListener(BaseAgent):
     
     def _initialize_whisper(self):
         """Initialize Whisper model for voice transcription"""
+        if whisper is None:
+            self.logger.warning("Whisper library is not available; voice transcription disabled")
+            return
+
         try:
             model_size = self.config.get('whisper_model', 'base')
             self.whisper_model = whisper.load_model(model_size)
@@ -63,10 +76,13 @@ class AgentListener(BaseAgent):
             audio_file = data.get('audio_file')
             device_info = data.get('device_info', {})
             location_data = data.get('location_data', {})
-            
+
             if not audio_data and not audio_file:
                 return {'error': 'No audio data provided'}
-            
+
+            if not self.whisper_model:
+                return {'error': 'Voice transcription model unavailable'}
+
             # Transcribe audio
             transcription = await self._transcribe_audio(audio_data or audio_file)
             

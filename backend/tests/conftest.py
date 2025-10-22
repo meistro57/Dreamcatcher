@@ -1,3 +1,8 @@
+import os
+import sys
+import tempfile
+from pathlib import Path
+
 import pytest
 import asyncio
 from sqlalchemy import create_engine
@@ -5,14 +10,17 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, AsyncMock
-import tempfile
-import os
+
+# Ensure the backend root is on the import path so top-level modules resolve.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Import your app modules
-from .. import main
-from ..database import Base, get_db
-from ..agents import agent_registry
-from ..services import AIService
+import main
+from database import Base, get_db
+from agents import agent_registry
+from services import AIService
 
 # Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

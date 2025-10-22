@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 import numpy as np
 
-from ..services.embedding_service import EmbeddingService
-from ..agents.agent_semantic import SemanticAgent
-from ..database.models import Idea, User
-from ..tasks.embedding_tasks import EmbeddingTaskManager
+from services.embedding_service import EmbeddingService
+from agents.agent_semantic import SemanticAgent
+from database.models import Idea, User
+from tasks.embedding_tasks import EmbeddingTaskManager
 
 
 class TestEmbeddingService:

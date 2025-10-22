@@ -9,17 +9,30 @@ from datetime import datetime
 import tempfile
 import os
 
-from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
-from ..database.models import User
-from ..agents import agent_registry, AgentListener, AgentClassifier
-from ..agents.agent_semantic import semantic_agent
-from ..services import AIService, AudioProcessor
-from .websocket_manager import WebSocketManager
-from .auth_routes import get_current_user
-from .models import (
-    CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
-    IdeaResponse, ProposalResponse, AgentStatusResponse
-)
+try:  # pragma: no cover - import flexibility for tests and runtime
+    from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
+    from ..database.models import User
+    from ..agents import agent_registry, AgentListener, AgentClassifier
+    from ..agents.agent_semantic import semantic_agent
+    from ..services import AIService, AudioProcessor
+    from .websocket_manager import WebSocketManager
+    from .auth_routes import get_current_user
+    from .models import (
+        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
+        IdeaResponse, ProposalResponse, AgentStatusResponse
+    )
+except ImportError:  # pragma: no cover - fallback when run as script
+    from database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
+    from database.models import User
+    from agents import agent_registry, AgentListener, AgentClassifier
+    from agents.agent_semantic import semantic_agent
+    from services import AIService, AudioProcessor
+    from api.websocket_manager import WebSocketManager
+    from api.auth_routes import get_current_user
+    from api.models import (
+        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
+        IdeaResponse, ProposalResponse, AgentStatusResponse
+    )
 
 # Initialize router
 router = APIRouter()

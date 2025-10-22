@@ -9,9 +9,15 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from .base_agent import BaseAgent
-from ..services.embedding_service import embedding_service
-from ..database.models import Idea, AgentLog
-from ..database.database import SessionLocal
+
+try:  # pragma: no cover
+    from ..services.embedding_service import embedding_service
+    from ..database.models import Idea, AgentLog
+    from ..database.database import SessionLocal
+except ImportError:  # pragma: no cover
+    from services.embedding_service import embedding_service
+    from database.models import Idea, AgentLog
+    from database.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +32,11 @@ class SemanticAgent(BaseAgent):
             version="1.0.0"
         )
         self.embedding_service = embedding_service
-        
+
+    async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Conform to BaseAgent API by delegating to message processing."""
+        return await self.process_message(data)
+
     async def process_idea(self, idea_id: str) -> Dict[str, Any]:
         """
         Process an idea for semantic understanding

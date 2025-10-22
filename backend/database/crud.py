@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Type, TypeVar, Generic
 from datetime import datetime, timedelta
 import json
 
@@ -8,6 +8,46 @@ from .models import (
     Idea, Tag, IdeaExpansion, IdeaVisual, Proposal, ProposalTask,
     Agent, AgentLog, SystemMetrics, ScheduledTask
 )
+
+TModel = TypeVar("TModel")
+
+
+class BaseCRUD(Generic[TModel]):
+    """Reusable CRUD helper that wraps common persistence operations."""
+
+    def __init__(self, db: Session, model: Type[TModel]):
+        self.db = db
+        self.model = model
+
+    def get(self, **filters) -> Optional[TModel]:
+        """Return the first record matching the provided filters."""
+        return self.db.query(self.model).filter_by(**filters).first()
+
+    def list(self, skip: int = 0, limit: int = 100) -> List[TModel]:
+        """Return a paginated list of model instances."""
+        return self.db.query(self.model).offset(skip).limit(limit).all()
+
+    def create(self, **data) -> TModel:
+        """Create and persist a new model instance."""
+        instance = self.model(**data)
+        self.db.add(instance)
+        self.db.commit()
+        self.db.refresh(instance)
+        return instance
+
+    def update(self, instance: TModel, **data) -> TModel:
+        """Apply updates to an instance and persist the changes."""
+        for key, value in data.items():
+            setattr(instance, key, value)
+        self.db.commit()
+        self.db.refresh(instance)
+        return instance
+
+    def delete(self, instance: TModel) -> None:
+        """Remove an instance from the database."""
+        self.db.delete(instance)
+        self.db.commit()
+
 
 class IdeaCRUD:
     """CRUD operations for Ideas"""

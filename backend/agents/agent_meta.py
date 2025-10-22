@@ -9,8 +9,13 @@ import ast
 import re
 
 from .base_agent import BaseAgent
-from ..database import get_db, SystemMetricsCRUD, AgentLogCRUD
-from ..services import AIService
+
+try:  # pragma: no cover
+    from ..database import get_db, SystemMetricsCRUD, AgentLogCRUD
+    from ..services import AIService
+except ImportError:  # pragma: no cover
+    from database import get_db, SystemMetricsCRUD, AgentLogCRUD
+    from services import AIService
 
 class AgentMeta(BaseAgent):
     """

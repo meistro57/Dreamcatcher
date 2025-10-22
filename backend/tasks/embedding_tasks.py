@@ -10,10 +10,16 @@ from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
-from ..database.database import SessionLocal
-from ..database.models import Idea, Agent, AgentLog
-from ..services.embedding_service import embedding_service
-from ..agents.agent_semantic import semantic_agent
+try:  # pragma: no cover
+    from ..database.database import SessionLocal
+    from ..database.models import Idea, Agent, AgentLog
+    from ..services.embedding_service import embedding_service
+    from ..agents.agent_semantic import semantic_agent
+except ImportError:  # pragma: no cover
+    from database.database import SessionLocal
+    from database.models import Idea, Agent, AgentLog
+    from services.embedding_service import embedding_service
+    from agents.agent_semantic import semantic_agent
 
 logger = logging.getLogger(__name__)
 

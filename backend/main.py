@@ -9,12 +9,20 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from .database import create_tables, db_manager
-from .database.init_auth import init_auth_system
-from .api import router, websocket_manager
-from .api.auth_routes import router as auth_router
-from .agents import agent_registry
-from .tasks.embedding_tasks import start_embedding_tasks, stop_embedding_tasks
+try:  # pragma: no cover - exercised implicitly during imports
+    from .database import create_tables, db_manager
+    from .database.init_auth import init_auth_system
+    from .api import router, websocket_manager
+    from .api.auth_routes import router as auth_router
+    from .agents import agent_registry
+    from .tasks.embedding_tasks import start_embedding_tasks, stop_embedding_tasks
+except ImportError:  # pragma: no cover - fallback for script-style execution
+    from database import create_tables, db_manager
+    from database.init_auth import init_auth_system
+    from api import router, websocket_manager
+    from api.auth_routes import router as auth_router
+    from agents import agent_registry
+    from tasks.embedding_tasks import start_embedding_tasks, stop_embedding_tasks
 
 # Configure logging
 logging.basicConfig(

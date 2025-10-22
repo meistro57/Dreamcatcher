@@ -1,4 +1,4 @@
-from .database import get_db, db_manager, create_tables, drop_tables
+from .database import get_db, db_manager, create_tables, drop_tables, Base
 from .models import (
     Idea, Tag, IdeaExpansion, IdeaVisual, Proposal, ProposalTask,
     Agent, AgentLog, SystemMetrics, ScheduledTask
@@ -10,7 +10,7 @@ from .crud import (
 )
 
 __all__ = [
-    'get_db', 'db_manager', 'create_tables', 'drop_tables',
+    'get_db', 'db_manager', 'create_tables', 'drop_tables', 'Base',
     'Idea', 'Tag', 'IdeaExpansion', 'IdeaVisual', 'Proposal', 'ProposalTask',
     'Agent', 'AgentLog', 'SystemMetrics', 'ScheduledTask',
     'IdeaCRUD', 'TagCRUD', 'ExpansionCRUD', 'VisualCRUD', 
