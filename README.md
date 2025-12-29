@@ -62,7 +62,7 @@ A 24/7 self-hosted system that:
 ### Tech Stack
 - **Backend**: FastAPI with WebSocket support
 - **Frontend**: Mobile-first PWA (React/Vue)
-- **AI Integration**: Claude, GPT, local models
+- **AI Integration**: Claude, GPT, OpenRouter (unified LLM access), local models
 - **Voice**: Whisper for transcription
 - **Images**: ComfyUI for visual generation
 - **Deployment**: Docker containerized deployment
@@ -118,7 +118,10 @@ For local development without domain requirements:
    ```
 
 4. **Add your API keys**
-   - Edit `.env` file with your Anthropic and OpenAI API keys
+   - Edit `.env` file with at least one AI service API key:
+     - `ANTHROPIC_API_KEY` for direct Claude access
+     - `OPENAI_API_KEY` for direct OpenAI access
+     - `OPENROUTER_API_KEY` for unified access to multiple LLMs
    - Restart the services
 
 5. **Start capturing ideas**
@@ -147,7 +150,8 @@ For production deployment with domain:
 3. **Configure API keys**
    ```bash
    nano .env
-   # Add your ANTHROPIC_API_KEY and OPENAI_API_KEY
+   # Add at least one AI service API key:
+   # ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY
    ```
 
 📖 **Detailed production setup**: [DEPLOYMENT.md](DEPLOYMENT.md)

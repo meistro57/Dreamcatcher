@@ -172,8 +172,11 @@ Dreamcatcher uses a sophisticated multi-agent architecture where each agent has 
 - **Database connection pooling** - optimized for production load
 
 ### Environment Variables
-All required environment variables are documented in `.env.local` template:
-- `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are required for AI functionality
+All required environment variables are documented in `.env.example` template:
+- **AI Service API Keys** (at least one required):
+  - `ANTHROPIC_API_KEY` - Direct access to Claude models
+  - `OPENAI_API_KEY` - Direct access to OpenAI GPT models
+  - `OPENROUTER_API_KEY` - Unified access to multiple LLM providers (Claude, GPT, Llama, Gemini, Mistral, etc.)
 - `DATABASE_URL` and `REDIS_URL` for data persistence
 - `SECRET_KEY` for JWT token signing
 
