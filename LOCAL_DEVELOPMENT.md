@@ -12,7 +12,7 @@ This guide helps you run Dreamcatcher locally without any domain configuration o
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/dreamcatcher.git
+git clone https://github.com/meistro57/Dreamcatcher.git
 cd dreamcatcher
 ```
 
