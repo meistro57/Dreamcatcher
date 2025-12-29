@@ -103,7 +103,7 @@ For local development without domain requirements:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/dreamcatcher.git
+   git clone https://github.com/meistro57/Dreamcatcher.git
    cd dreamcatcher
    ```
 

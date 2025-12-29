@@ -4,21 +4,21 @@
 
 ### Option 1: Docker (Recommended)
 ```bash
-git clone https://github.com/your-username/dreamcatcher.git
+git clone https://github.com/meistro57/Dreamcatcher.git
 cd dreamcatcher
 ./start-local.sh
 ```
 
 ### Option 2: Native (Python + Node.js)
 ```bash
-git clone https://github.com/your-username/dreamcatcher.git
+git clone https://github.com/meistro57/Dreamcatcher.git
 cd dreamcatcher
 ./start-native.sh
 ```
 
 ### Option 3: Manual Setup
 ```bash
-git clone https://github.com/your-username/dreamcatcher.git
+git clone https://github.com/meistro57/Dreamcatcher.git
 cd dreamcatcher
 
 # Set up Python virtual environment (recommended)
