@@ -20,6 +20,12 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+try:
+    from openai import OpenAI as OpenRouterClient
+    OPENROUTER_AVAILABLE = True
+except ImportError:
+    OPENROUTER_AVAILABLE = False
+
 class AIServiceError(Exception):
     """Base exception for AI service errors"""
     pass
@@ -64,7 +70,8 @@ class AIService:
         # Initialize clients
         self.claude_client = None
         self.openai_client = None
-        
+        self.openrouter_client = None
+
         # Configuration
         self.default_model = "claude-3-haiku"
         self.rate_limit_delay = 1.0  # seconds between requests
@@ -78,6 +85,7 @@ class AIService:
             "failed_requests": 0,
             "claude_requests": 0,
             "openai_requests": 0,
+            "openrouter_requests": 0,
             "fallback_used": 0
         }
         
@@ -115,14 +123,32 @@ class AIService:
                 self.logger.warning("OPENAI_API_KEY not found - OpenAI client disabled")
         else:
             self.logger.warning("OpenAI library not available - install with: pip install openai")
-        
+
+        # Initialize OpenRouter client
+        if OPENROUTER_AVAILABLE:
+            api_key = os.getenv("OPENROUTER_API_KEY")
+            if api_key:
+                try:
+                    self.openrouter_client = OpenRouterClient(
+                        base_url="https://openrouter.ai/api/v1",
+                        api_key=api_key
+                    )
+                    self.logger.info("OpenRouter client initialized successfully")
+                except Exception as e:
+                    self.logger.error(f"Failed to initialize OpenRouter client: {e}")
+                    self.openrouter_client = None
+            else:
+                self.logger.warning("OPENROUTER_API_KEY not found - OpenRouter client disabled")
+        else:
+            self.logger.warning("OpenRouter library not available - uses OpenAI library")
+
         # Check if any service is available
         if not self.is_available():
             self.logger.error("No AI services available - please configure API keys")
     
     def is_available(self) -> bool:
         """Check if any AI service is available"""
-        return (self.claude_client is not None) or (self.openai_client is not None)
+        return (self.claude_client is not None) or (self.openai_client is not None) or (self.openrouter_client is not None)
     
     def get_available_models(self) -> List[str]:
         """Get list of available models"""
@@ -131,6 +157,18 @@ class AIService:
             models.extend(["claude-3-haiku", "claude-3-sonnet", "claude-3-opus"])
         if self.openai_client:
             models.extend(["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"])
+        if self.openrouter_client:
+            models.extend([
+                "openrouter/anthropic/claude-3-haiku",
+                "openrouter/anthropic/claude-3-sonnet",
+                "openrouter/anthropic/claude-3-opus",
+                "openrouter/openai/gpt-3.5-turbo",
+                "openrouter/openai/gpt-4",
+                "openrouter/openai/gpt-4-turbo",
+                "openrouter/meta-llama/llama-3-70b-instruct",
+                "openrouter/google/gemini-pro",
+                "openrouter/mistralai/mistral-large"
+            ])
         return models
     
     def _validate_inputs(self, prompt: str, max_tokens: int, temperature: float):
@@ -276,6 +314,8 @@ class AIService:
             return "claude-3-haiku"
         elif self.openai_client:
             return "gpt-3.5-turbo"
+        elif self.openrouter_client:
+            return "openrouter/anthropic/claude-3-haiku"
         else:
             raise AIServiceUnavailableError("No AI clients available")
     
@@ -289,8 +329,14 @@ class AIService:
         context: Optional[Dict[str, Any]] = None
     ) -> AIResponse:
         """Generate response with specific model"""
-        
-        if model.startswith("claude"):
+
+        if model.startswith("openrouter/"):
+            if not self.openrouter_client:
+                raise AIServiceUnavailableError("OpenRouter client not available")
+            return await self._generate_openrouter_response(
+                prompt, model, max_tokens, temperature, system_prompt, context
+            )
+        elif model.startswith("claude"):
             if not self.claude_client:
                 raise AIServiceUnavailableError("Claude client not available")
             return await self._generate_claude_response(
@@ -404,7 +450,57 @@ class AIService:
             raise AIServiceError(f"OpenAI API request timed out after {self.timeout}s")
         except Exception as e:
             self._handle_api_error(e, "OpenAI")
-    
+
+    async def _generate_openrouter_response(
+        self,
+        prompt: str,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        system_prompt: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AIResponse:
+        """Generate response using OpenRouter with proper error handling"""
+
+        try:
+            # Strip 'openrouter/' prefix from model name for API call
+            api_model = model.replace("openrouter/", "")
+
+            messages = []
+
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+
+            messages.append({"role": "user", "content": prompt})
+
+            # Use timeout for the API call
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.openrouter_client.chat.completions.create,
+                    model=api_model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                ),
+                timeout=self.timeout
+            )
+
+            self.usage_stats["openrouter_requests"] += 1
+
+            return AIResponse(
+                response=response.choices[0].message.content,
+                model=model,
+                tokens_used=response.usage.total_tokens if response.usage else 0,
+                input_tokens=response.usage.prompt_tokens if response.usage else 0,
+                timestamp=datetime.utcnow().isoformat(),
+                context=context
+            )
+
+        except asyncio.TimeoutError:
+            raise AIServiceError(f"OpenRouter API request timed out after {self.timeout}s")
+        except Exception as e:
+            self._handle_api_error(e, "OpenRouter")
+
     async def _try_fallback_model(
         self,
         prompt: str,
@@ -445,17 +541,26 @@ class AIService:
     def _get_fallback_models(self, original_model: str) -> List[str]:
         """Get fallback models prioritized by reliability and cost"""
         fallback_map = {
-            "claude-3-opus": ["claude-3-sonnet", "claude-3-haiku", "gpt-4"],
-            "claude-3-sonnet": ["claude-3-haiku", "gpt-4-turbo", "gpt-3.5-turbo"],
-            "claude-3-haiku": ["claude-3-sonnet", "gpt-3.5-turbo", "gpt-4"],
-            "gpt-4": ["gpt-4-turbo", "claude-3-sonnet", "gpt-3.5-turbo"],
-            "gpt-4-turbo": ["gpt-4", "claude-3-sonnet", "gpt-3.5-turbo"],
-            "gpt-3.5-turbo": ["gpt-4", "claude-3-haiku", "claude-3-sonnet"]
+            "claude-3-opus": ["claude-3-sonnet", "claude-3-haiku", "openrouter/anthropic/claude-3-opus", "gpt-4"],
+            "claude-3-sonnet": ["claude-3-haiku", "openrouter/anthropic/claude-3-sonnet", "gpt-4-turbo", "gpt-3.5-turbo"],
+            "claude-3-haiku": ["claude-3-sonnet", "openrouter/anthropic/claude-3-haiku", "gpt-3.5-turbo", "gpt-4"],
+            "gpt-4": ["gpt-4-turbo", "openrouter/openai/gpt-4", "claude-3-sonnet", "gpt-3.5-turbo"],
+            "gpt-4-turbo": ["gpt-4", "openrouter/openai/gpt-4-turbo", "claude-3-sonnet", "gpt-3.5-turbo"],
+            "gpt-3.5-turbo": ["gpt-4", "openrouter/openai/gpt-3.5-turbo", "claude-3-haiku", "claude-3-sonnet"],
+            "openrouter/anthropic/claude-3-opus": ["openrouter/anthropic/claude-3-sonnet", "claude-3-opus", "openrouter/openai/gpt-4"],
+            "openrouter/anthropic/claude-3-sonnet": ["openrouter/anthropic/claude-3-haiku", "claude-3-sonnet", "openrouter/openai/gpt-4-turbo"],
+            "openrouter/anthropic/claude-3-haiku": ["openrouter/anthropic/claude-3-sonnet", "claude-3-haiku", "openrouter/openai/gpt-3.5-turbo"],
+            "openrouter/openai/gpt-4": ["openrouter/openai/gpt-4-turbo", "gpt-4", "openrouter/anthropic/claude-3-sonnet"],
+            "openrouter/openai/gpt-4-turbo": ["openrouter/openai/gpt-4", "gpt-4-turbo", "openrouter/anthropic/claude-3-sonnet"],
+            "openrouter/openai/gpt-3.5-turbo": ["openrouter/openai/gpt-4", "gpt-3.5-turbo", "openrouter/anthropic/claude-3-haiku"],
+            "openrouter/meta-llama/llama-3-70b-instruct": ["openrouter/anthropic/claude-3-haiku", "openrouter/openai/gpt-3.5-turbo"],
+            "openrouter/google/gemini-pro": ["openrouter/anthropic/claude-3-haiku", "openrouter/openai/gpt-3.5-turbo"],
+            "openrouter/mistralai/mistral-large": ["openrouter/anthropic/claude-3-sonnet", "openrouter/openai/gpt-4"]
         }
-        
+
         fallbacks = fallback_map.get(original_model, [])
         available_models = self.get_available_models()
-        
+
         return [model for model in fallbacks if model in available_models]
     
     async def test_connection(self) -> Dict[str, Any]:
@@ -500,7 +605,7 @@ class AIService:
                     max_tokens=10
                 )
                 response_time = (datetime.utcnow() - start_time).total_seconds()
-                
+
                 results['openai'] = {
                     'available': True,
                     'response_time': response_time,
@@ -517,7 +622,35 @@ class AIService:
                 'available': False,
                 'error': 'Client not initialized'
             }
-        
+
+        # Test OpenRouter
+        if self.openrouter_client:
+            try:
+                start_time = datetime.utcnow()
+                test_result = await self.generate_response(
+                    "Say 'Hello' in one word.",
+                    model="openrouter/anthropic/claude-3-haiku",
+                    max_tokens=10
+                )
+                response_time = (datetime.utcnow() - start_time).total_seconds()
+
+                results['openrouter'] = {
+                    'available': True,
+                    'response_time': response_time,
+                    'model': test_result.model,
+                    'tokens_used': test_result.tokens_used
+                }
+            except Exception as e:
+                results['openrouter'] = {
+                    'available': False,
+                    'error': str(e)
+                }
+        else:
+            results['openrouter'] = {
+                'available': False,
+                'error': 'Client not initialized'
+            }
+
         return results
     
     def get_usage_stats(self) -> Dict[str, Any]:
@@ -537,6 +670,7 @@ class AIService:
         # Add service availability
         stats["claude_available"] = self.claude_client is not None
         stats["openai_available"] = self.openai_client is not None
+        stats["openrouter_available"] = self.openrouter_client is not None
         stats["default_model"] = self.default_model
         stats["available_models"] = self.get_available_models()
         

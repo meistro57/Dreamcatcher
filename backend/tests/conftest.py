@@ -70,7 +70,12 @@ def mock_ai_service():
     """Mock AI service for testing."""
     mock_service = MagicMock(spec=AIService)
     mock_service.is_available.return_value = True
-    mock_service.get_available_models.return_value = ["claude-3-sonnet", "gpt-4"]
+    mock_service.get_available_models.return_value = [
+        "claude-3-sonnet",
+        "gpt-4",
+        "openrouter/anthropic/claude-3-haiku",
+        "openrouter/openai/gpt-4"
+    ]
     mock_service.generate_response = AsyncMock(return_value={
         "response": "Test response",
         "tokens_used": 100,
