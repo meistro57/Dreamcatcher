@@ -22,6 +22,10 @@ EMAIL=${EMAIL:-"admin@${DOMAIN}"}
 DATA_DIR="/opt/dreamcatcher"
 LOG_DIR="/var/log/dreamcatcher"
 
+# PORTS - Changed to avoid conflicts!
+HTTP_PORT=${HTTP_PORT:-8080}
+HTTPS_PORT=${HTTPS_PORT:-8443}
+
 # Functions
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -142,37 +146,22 @@ EOF
 }
 
 setup_ssl() {
-    log_info "Setting up SSL certificates..."
-    
-    # Install certbot if not present
-    if ! command -v certbot &> /dev/null; then
-        log_info "Installing certbot..."
-        apt-get update
-        apt-get install -y certbot python3-certbot-nginx
-    fi
+    log_info "Setting up SSL certificates (Self-Signed Mode)..."
     
     # Create SSL directory
     mkdir -p docker/ssl
     
-    # Generate SSL certificate
+    # Generate Self-Signed SSL certificate
+    # We use this because Port 80 is blocked, preventing Certbot from working properly.
     if [[ ! -f "docker/ssl/${FULL_DOMAIN}.crt" ]]; then
-        log_info "Generating SSL certificate for ${FULL_DOMAIN}..."
+        log_info "Generating self-signed certificate for ${FULL_DOMAIN}..."
         
-        # Stop nginx if running
-        systemctl stop nginx 2>/dev/null || true
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout docker/ssl/${FULL_DOMAIN}.key \
+            -out docker/ssl/${FULL_DOMAIN}.crt \
+            -subj "/C=US/ST=State/L=City/O=Dreamcatcher/OU=AI/CN=${FULL_DOMAIN}"
         
-        # Generate certificate
-        certbot certonly --standalone \
-            --email $EMAIL \
-            --agree-tos \
-            --no-eff-email \
-            -d $FULL_DOMAIN
-        
-        # Copy certificates
-        cp /etc/letsencrypt/live/${FULL_DOMAIN}/fullchain.pem docker/ssl/${FULL_DOMAIN}.crt
-        cp /etc/letsencrypt/live/${FULL_DOMAIN}/privkey.pem docker/ssl/${FULL_DOMAIN}.key
-        
-        log_success "SSL certificate generated"
+        log_success "Self-signed SSL certificate generated"
     else
         log_info "SSL certificate already exists"
     fi
@@ -210,11 +199,15 @@ http {
     limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone \$binary_remote_addr zone=upload:10m rate=2r/s;
 
-    # Redirect HTTP to HTTPS
+    # HTTP server (Redirect logic removed to avoid port confusion)
     server {
         listen 80;
         server_name ${FULL_DOMAIN};
-        return 301 https://\$server_name\$request_uri;
+        # Simple health check for HTTP
+        location / {
+            return 200 'Please use HTTPS on port ${HTTPS_PORT}';
+            add_header Content-Type text/plain;
+        }
     }
 
     # Main HTTPS server
@@ -354,8 +347,8 @@ services:
     image: nginx:alpine
     container_name: dreamcatcher-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT}:80"
+      - "${HTTPS_PORT}:443"
     volumes:
       - ./nginx-production.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
@@ -408,7 +401,7 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/mark/Dreamcatcher/docker
+WorkingDirectory=$(pwd)/docker
 ExecStart=/usr/bin/docker-compose -f docker-compose.prod.yml up -d
 ExecStop=/usr/bin/docker-compose -f docker-compose.prod.yml down
 TimeoutStartSec=0
@@ -519,25 +512,6 @@ deploy_application() {
     cd ..
 }
 
-setup_ssl_renewal() {
-    log_info "Setting up SSL certificate auto-renewal..."
-    
-    # Create renewal hook
-    cat > /etc/letsencrypt/renewal-hooks/deploy/dreamcatcher.sh << EOF
-#!/bin/bash
-# Copy renewed certificates to Docker volume
-cp /etc/letsencrypt/live/${FULL_DOMAIN}/fullchain.pem /home/mark/Dreamcatcher/docker/ssl/${FULL_DOMAIN}.crt
-cp /etc/letsencrypt/live/${FULL_DOMAIN}/privkey.pem /home/mark/Dreamcatcher/docker/ssl/${FULL_DOMAIN}.key
-
-# Reload nginx
-docker exec dreamcatcher-nginx nginx -s reload
-EOF
-    
-    chmod +x /etc/letsencrypt/renewal-hooks/deploy/dreamcatcher.sh
-    
-    log_success "SSL auto-renewal configured"
-}
-
 main() {
     log_info "🧠 Dreamcatcher Deployment Starting..."
     
@@ -550,19 +524,18 @@ main() {
     setup_systemd_service
     setup_monitoring
     deploy_application
-    setup_ssl_renewal
     
     log_success "🎉 Dreamcatcher deployed successfully!"
-    log_info "🌐 Access your idea factory at: https://${FULL_DOMAIN}"
+    log_info "🌐 Access your idea factory at: https://${FULL_DOMAIN}:${HTTPS_PORT}"
+    log_info "⚠️  Note: You will see a security warning because we used a self-signed certificate."
+    log_info "⚠️  Just click 'Advanced' -> 'Proceed' to access the site."
     log_info "📊 Monitor logs at: ${LOG_DIR}"
-    log_info "🔧 Manage service with: systemctl {start|stop|restart|status} dreamcatcher"
     
     echo ""
     echo "Next steps:"
     echo "1. Set your API keys in .env file"
     echo "2. Test voice capture functionality"
-    echo "3. Configure ComfyUI if needed"
-    echo "4. Check logs: docker-compose -f docker/docker-compose.prod.yml logs"
+    echo "3. Check logs: docker-compose -f docker/docker-compose.prod.yml logs"
     echo ""
     echo "The basement never sleeps. Neither does your idea factory. 🚀"
 }
