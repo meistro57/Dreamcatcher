@@ -57,7 +57,8 @@ class User(Base):
     preferences = Column(JSON, default=dict)
     
     # Relationships
-    roles = relationship("Role", secondary=user_roles, back_populates="users")
+    roles = relationship("Role", secondary=user_roles, back_populates="users",
+                        foreign_keys=[user_roles.c.user_id])
     ideas = relationship("Idea", back_populates="user")
     user_sessions = relationship("UserSession", back_populates="user")
     
@@ -79,7 +80,8 @@ class Role(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
-    users = relationship("User", secondary=user_roles, back_populates="roles")
+    users = relationship("User", secondary=user_roles, back_populates="roles",
+                        foreign_keys=[user_roles.c.user_id])
     
     def __repr__(self):
         return f"<Role(id={self.id}, name={self.name})>"

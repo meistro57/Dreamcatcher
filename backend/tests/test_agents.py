@@ -7,12 +7,26 @@ from agents.base_agent import BaseAgent, AgentRegistry, AgentMessage
 from agents.agent_classifier import AgentClassifier
 from agents.agent_listener import AgentListener
 
+
+# Concrete test implementation of BaseAgent
+class TestAgent(BaseAgent):
+    """Concrete implementation of BaseAgent for testing."""
+
+    async def process(self, data):
+        """Simple test implementation of process method."""
+        return {
+            "success": True,
+            "result": "Test result",
+            "data": data
+        }
+
+
 class TestBaseAgent:
     """Test cases for BaseAgent functionality."""
     
     def test_agent_initialization(self):
         """Test agent initialization."""
-        agent = BaseAgent("test_agent", "Test Agent", "Test description", "1.0.0")
+        agent = TestAgent("test_agent", "Test Agent", "Test description", "1.0.0")
         
         assert agent.agent_id == "test_agent"
         assert agent.name == "Test Agent"
@@ -25,7 +39,7 @@ class TestBaseAgent:
     
     def test_agent_performance_metrics(self):
         """Test agent performance metrics."""
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         
         # Simulate some processing
         agent.total_processed = 10
@@ -43,7 +57,7 @@ class TestBaseAgent:
     
     def test_agent_activation_deactivation(self):
         """Test agent activation and deactivation."""
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         
         assert agent.is_active is True
         
@@ -55,7 +69,7 @@ class TestBaseAgent:
     
     def test_agent_config_update(self):
         """Test agent configuration updates."""
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         
         initial_config = {"key1": "value1"}
         agent.update_config(initial_config)
@@ -68,7 +82,7 @@ class TestBaseAgent:
     @pytest.mark.asyncio
     async def test_send_message(self, mock_agent):
         """Test sending messages between agents."""
-        recipient_agent = BaseAgent("recipient", "Recipient Agent")
+        recipient_agent = TestAgent("recipient", "Recipient Agent")
         
         # Mock the delivery system
         mock_agent._deliver_message = AsyncMock()
@@ -137,7 +151,7 @@ class TestAgentRegistry:
     def test_agent_registration(self):
         """Test agent registration."""
         registry = AgentRegistry()
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         
         registry.register(agent)
         
@@ -147,7 +161,7 @@ class TestAgentRegistry:
     def test_agent_unregistration(self):
         """Test agent unregistration."""
         registry = AgentRegistry()
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         
         registry.register(agent)
         assert registry.get_agent("test_agent") is not None
@@ -158,8 +172,8 @@ class TestAgentRegistry:
     def test_get_all_agents(self):
         """Test getting all agents."""
         registry = AgentRegistry()
-        agent1 = BaseAgent("agent1", "Agent 1")
-        agent2 = BaseAgent("agent2", "Agent 2")
+        agent1 = TestAgent("agent1", "Agent 1")
+        agent2 = TestAgent("agent2", "Agent 2")
         
         registry.register(agent1)
         registry.register(agent2)
@@ -172,8 +186,8 @@ class TestAgentRegistry:
     def test_get_active_agents(self):
         """Test getting active agents."""
         registry = AgentRegistry()
-        agent1 = BaseAgent("agent1", "Agent 1")
-        agent2 = BaseAgent("agent2", "Agent 2")
+        agent1 = TestAgent("agent1", "Agent 1")
+        agent2 = TestAgent("agent2", "Agent 2")
         
         registry.register(agent1)
         registry.register(agent2)
@@ -190,7 +204,7 @@ class TestAgentRegistry:
     async def test_send_message(self):
         """Test sending message through registry."""
         registry = AgentRegistry()
-        agent = BaseAgent("test_agent", "Test Agent")
+        agent = TestAgent("test_agent", "Test Agent")
         registry.register(agent)
         
         message = AgentMessage(
@@ -213,9 +227,9 @@ class TestAgentRegistry:
     async def test_broadcast_message(self):
         """Test broadcasting message to all agents."""
         registry = AgentRegistry()
-        agent1 = BaseAgent("agent1", "Agent 1")
-        agent2 = BaseAgent("agent2", "Agent 2")
-        sender_agent = BaseAgent("sender", "Sender Agent")
+        agent1 = TestAgent("agent1", "Agent 1")
+        agent2 = TestAgent("agent2", "Agent 2")
+        sender_agent = TestAgent("sender", "Sender Agent")
         
         registry.register(agent1)
         registry.register(agent2)
@@ -242,8 +256,8 @@ class TestAgentRegistry:
     def test_system_status(self):
         """Test getting system status."""
         registry = AgentRegistry()
-        agent1 = BaseAgent("agent1", "Agent 1")
-        agent2 = BaseAgent("agent2", "Agent 2")
+        agent1 = TestAgent("agent1", "Agent 1")
+        agent2 = TestAgent("agent2", "Agent 2")
         
         registry.register(agent1)
         registry.register(agent2)
