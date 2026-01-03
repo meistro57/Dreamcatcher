@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, W
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
+from enum import Enum
 import json
 import asyncio
 import logging
@@ -13,6 +14,7 @@ try:  # pragma: no cover - import flexibility for tests and runtime
     from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
     from ..database.models import User
     from ..agents import agent_registry, AgentListener, AgentClassifier
+    from ..agents.base_agent import AgentMessage
     from ..agents.agent_semantic import semantic_agent
     from ..services import AIService, AudioProcessor
     from .websocket_manager import WebSocketManager
@@ -25,6 +27,7 @@ except ImportError:  # pragma: no cover - fallback when run as script
     from database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
     from database.models import User
     from agents import agent_registry, AgentListener, AgentClassifier
+    from agents.base_agent import AgentMessage
     from agents.agent_semantic import semantic_agent
     from services import AIService, AudioProcessor
     from api.websocket_manager import WebSocketManager
@@ -33,6 +36,17 @@ except ImportError:  # pragma: no cover - fallback when run as script
         CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
         IdeaResponse, ProposalResponse, AgentStatusResponse
     )
+
+# Constants
+MAX_AUDIO_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_TEXT_LENGTH = 10000
+
+# Enums for validation
+class UrgencyLevel(str, Enum):
+    low = "low"
+    normal = "normal"
+    high = "high"
+    critical = "critical"
 
 # Initialize router
 router = APIRouter()
@@ -57,16 +71,26 @@ agent_registry.register(semantic_agent)
 
 # Health check endpoint
 @router.get("/health")
-async def health_check():
+async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint"""
+    # Check database health
+    db_healthy = False
+    try:
+        # Simple query to test database connection
+        db.execute("SELECT 1")
+        db_healthy = True
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        db_healthy = False
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_healthy else "degraded",
         "timestamp": datetime.utcnow().isoformat(),
         "agents": len(agent_registry.get_active_agents()),
         "services": {
             "ai": ai_service.is_available(),
             "audio": True,
-            "database": True  # Would check db connection in real implementation
+            "database": db_healthy
         }
     }
 
@@ -74,70 +98,85 @@ async def health_check():
 @router.post("/capture/voice", response_model=CaptureVoiceResponse)
 async def capture_voice(
     audio_file: UploadFile = File(...),
-    urgency: str = Form("normal"),
+    urgency: UrgencyLevel = Form(UrgencyLevel.normal),
     location: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Capture voice input and process it"""
+    tmp_file_path = None
     try:
         # Validate file type
         if not audio_file.filename.lower().endswith(('.wav', '.mp3', '.ogg', '.webm')):
             raise HTTPException(status_code=400, detail="Unsupported audio format")
-        
+
+        # Read and validate file size
+        content = await audio_file.read()
+        if len(content) > MAX_AUDIO_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_AUDIO_FILE_SIZE/1024/1024}MB")
+
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
-            content = await audio_file.read()
+            tmp_file_path = tmp_file.name
             tmp_file.write(content)
             tmp_file.flush()
-            
-            # Process audio
-            audio_result = await audio_processor.process_audio_file(tmp_file.name)
-            
-            # Send to listener agent
-            result = await listener_agent.handle_message(
-                type('',(object,),{
-                    'id': f'voice_{datetime.utcnow().timestamp()}',
-                    'sender': 'api',
-                    'recipient': 'listener',
-                    'action': 'process',
-                    'data': {
-                        'type': 'voice',
-                        'audio_file': tmp_file.name,
-                        'urgency': urgency,
-                        'location_data': {'location': location} if location else {},
-                        'device_info': {'source': 'api_upload'},
-                        'user_id': current_user.id
-                    },
-                    'timestamp': datetime.utcnow()
-                })()
+
+        # Process audio
+        audio_result = await audio_processor.process_audio_file(tmp_file_path)
+
+        # Send to listener agent using proper AgentMessage
+        message = AgentMessage(
+            id=f'voice_{datetime.utcnow().timestamp()}',
+            sender='api',
+            recipient='listener',
+            action='process',
+            data={
+                'type': 'voice',
+                'audio_file': tmp_file_path,
+                'urgency': urgency.value,
+                'location_data': {'location': location} if location else {},
+                'device_info': {'source': 'api_upload'},
+                'user_id': current_user.id
+            },
+            timestamp=datetime.utcnow()
+        )
+        result = await listener_agent.handle_message(message)
+
+        if result and result.get('success'):
+            # Notify WebSocket clients
+            await ws_manager.broadcast({
+                'type': 'idea_captured',
+                'idea_id': result['idea_id'],
+                'source': 'voice',
+                'content': result.get('transcription', '')
+            })
+
+            return CaptureVoiceResponse(
+                success=True,
+                idea_id=result['idea_id'],
+                transcription=result.get('transcription', ''),
+                audio_quality=audio_result.get('quality_metrics', {}),
+                message=result.get('message', 'Voice captured successfully')
             )
-            
-            # Clean up temp file
-            os.unlink(tmp_file.name)
-            
-            if result and result.get('success'):
-                # Notify WebSocket clients
-                await ws_manager.broadcast({
-                    'type': 'idea_captured',
-                    'idea_id': result['idea_id'],
-                    'source': 'voice',
-                    'content': result.get('transcription', '')
-                })
-                
-                return CaptureVoiceResponse(
-                    success=True,
-                    idea_id=result['idea_id'],
-                    transcription=result.get('transcription', ''),
-                    audio_quality=audio_result.get('quality_metrics', {}),
-                    message=result.get('message', 'Voice captured successfully')
-                )
-            else:
-                raise HTTPException(status_code=500, detail=result.get('error', 'Processing failed'))
-                
+        else:
+            raise HTTPException(status_code=500, detail=result.get('error', 'Processing failed'))
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Voice capture failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        debug = os.getenv("DEBUG", "false").lower() == "true"
+        raise HTTPException(
+            status_code=500,
+            detail=str(e) if debug else "Internal server error"
+        )
+    finally:
+        # Clean up temp file
+        if tmp_file_path and os.path.exists(tmp_file_path):
+            try:
+                os.unlink(tmp_file_path)
+            except Exception as e:
+                logger.error(f"Failed to clean up temp file {tmp_file_path}: {e}")
 
 # Text capture endpoint
 @router.post("/capture/text", response_model=CaptureTextResponse)
@@ -148,25 +187,31 @@ async def capture_text(
 ):
     """Capture text input and process it"""
     try:
-        # Send to listener agent
-        result = await listener_agent.handle_message(
-            type('',(object,),{
-                'id': f'text_{datetime.utcnow().timestamp()}',
-                'sender': 'api',
-                'recipient': 'listener',
-                'action': 'process',
-                'data': {
-                    'type': 'text',
-                    'content': request.content,
-                    'urgency': request.urgency,
-                    'location_data': {'location': request.location} if request.location else {},
-                    'device_info': {'source': 'api_text'},
-                    'user_id': current_user.id
-                },
-                'timestamp': datetime.utcnow()
-            })()
+        # Validate text length
+        if len(request.content) > MAX_TEXT_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Text too long. Maximum length is {MAX_TEXT_LENGTH} characters"
+            )
+
+        # Send to listener agent using proper AgentMessage
+        message = AgentMessage(
+            id=f'text_{datetime.utcnow().timestamp()}',
+            sender='api',
+            recipient='listener',
+            action='process',
+            data={
+                'type': 'text',
+                'content': request.content,
+                'urgency': request.urgency,
+                'location_data': {'location': request.location} if request.location else {},
+                'device_info': {'source': 'api_text'},
+                'user_id': current_user.id
+            },
+            timestamp=datetime.utcnow()
         )
-        
+        result = await listener_agent.handle_message(message)
+
         if result and result.get('success'):
             # Notify WebSocket clients
             await ws_manager.broadcast({
@@ -175,7 +220,7 @@ async def capture_text(
                 'source': 'text',
                 'content': request.content
             })
-            
+
             return CaptureTextResponse(
                 success=True,
                 idea_id=result['idea_id'],
@@ -184,10 +229,16 @@ async def capture_text(
             )
         else:
             raise HTTPException(status_code=500, detail=result.get('error', 'Processing failed'))
-            
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Text capture failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        debug = os.getenv("DEBUG", "false").lower() == "true"
+        raise HTTPException(
+            status_code=500,
+            detail=str(e) if debug else "Internal server error"
+        )
 
 # Dream capture endpoint
 @router.post("/capture/dream")
@@ -200,23 +251,30 @@ async def capture_dream(
 ):
     """Capture dream log entry"""
     try:
-        result = await listener_agent.handle_message(
-            type('',(object,),{
-                'id': f'dream_{datetime.utcnow().timestamp()}',
-                'sender': 'api',
-                'recipient': 'listener',
-                'action': 'process',
-                'data': {
-                    'type': 'dream',
-                    'content': content,
-                    'dream_type': dream_type,
-                    'sleep_stage': sleep_stage,
-                    'user_id': current_user.id
-                },
-                'timestamp': datetime.utcnow()
-            })()
+        # Validate content length
+        if len(content) > MAX_TEXT_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Dream text too long. Maximum length is {MAX_TEXT_LENGTH} characters"
+            )
+
+        # Send to listener agent using proper AgentMessage
+        message = AgentMessage(
+            id=f'dream_{datetime.utcnow().timestamp()}',
+            sender='api',
+            recipient='listener',
+            action='process',
+            data={
+                'type': 'dream',
+                'content': content,
+                'dream_type': dream_type,
+                'sleep_stage': sleep_stage,
+                'user_id': current_user.id
+            },
+            timestamp=datetime.utcnow()
         )
-        
+        result = await listener_agent.handle_message(message)
+
         if result and result.get('success'):
             await ws_manager.broadcast({
                 'type': 'dream_captured',
@@ -224,7 +282,7 @@ async def capture_dream(
                 'dream_type': dream_type,
                 'content': content
             })
-            
+
             return {
                 'success': True,
                 'idea_id': result['idea_id'],
@@ -233,10 +291,16 @@ async def capture_dream(
             }
         else:
             raise HTTPException(status_code=500, detail=result.get('error', 'Processing failed'))
-            
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Dream capture failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        debug = os.getenv("DEBUG", "false").lower() == "true"
+        raise HTTPException(
+            status_code=500,
+            detail=str(e) if debug else "Internal server error"
+        )
 
 # Get ideas endpoint
 @router.get("/ideas", response_model=List[IdeaResponse])
