@@ -58,9 +58,9 @@ check_requirements() {
         exit 1
     fi
     
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "Docker Compose is not installed"
+    # Check Docker Compose plugin
+    if ! docker compose version &> /dev/null; then
+        log_error "Docker Compose plugin is not installed or not available"
         exit 1
     fi
     
@@ -402,8 +402,8 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$(pwd)/docker
-ExecStart=/usr/bin/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/bin/docker-compose -f docker-compose.prod.yml down
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
 TimeoutStartSec=0
 
 [Install]
@@ -493,19 +493,19 @@ deploy_application() {
     cd docker
     
     # Build and start services
-    docker-compose -f docker-compose.prod.yml build
-    docker-compose -f docker-compose.prod.yml up -d
+    docker compose -f docker-compose.prod.yml build
+    docker compose -f docker-compose.prod.yml up -d
     
     # Wait for services to be ready
     log_info "Waiting for services to start..."
     sleep 30
     
     # Check if services are running
-    if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+    if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
         log_success "Services started successfully"
     else
         log_error "Some services failed to start"
-        docker-compose -f docker-compose.prod.yml logs
+        docker compose -f docker-compose.prod.yml logs
         exit 1
     fi
     
@@ -535,7 +535,7 @@ main() {
     echo "Next steps:"
     echo "1. Set your API keys in .env file"
     echo "2. Test voice capture functionality"
-    echo "3. Check logs: docker-compose -f docker/docker-compose.prod.yml logs"
+    echo "3. Check logs: docker compose -f docker/docker-compose.prod.yml logs"
     echo ""
     echo "The basement never sleeps. Neither does your idea factory. 🚀"
 }
