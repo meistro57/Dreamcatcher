@@ -28,7 +28,7 @@ fi
 
 # Start with Docker Compose
 log_info "Starting services with Docker Compose..."
-docker-compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # Wait for services to be ready
 log_info "Waiting for services to start..."
@@ -56,7 +56,7 @@ echo "🔧 Backend API: http://localhost:8000"
 echo "📊 API Docs: http://localhost:8000/docs"
 echo "🗄️ Database: localhost:5432 (dreamcatcher/secure_password)"
 echo ""
-echo "📝 View logs: docker-compose -f docker/docker-compose.yml logs -f"
-echo "🛑 Stop services: docker-compose -f docker/docker-compose.yml down"
+echo "📝 View logs: docker compose -f docker/docker-compose.yml logs -f"
+echo "🛑 Stop services: docker compose -f docker/docker-compose.yml down"
 echo ""
 echo "Start capturing ideas! 💡"

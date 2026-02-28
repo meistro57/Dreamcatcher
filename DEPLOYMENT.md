@@ -96,7 +96,7 @@ sudo certbot certonly --standalone \
 
 ```bash
 cd docker
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ### 4. Systemd Service
@@ -113,8 +113,8 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/path/to/dreamcatcher/docker
-ExecStart=/usr/bin/docker-compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/bin/docker-compose -f docker-compose.prod.yml down
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
 TimeoutStartSec=0
 
 [Install]
@@ -162,7 +162,7 @@ curl https://dreamcatcher.yourdomain.com/api/health
 
 View application logs:
 ```bash
-docker-compose -f docker/docker-compose.prod.yml logs -f
+docker compose -f docker/docker-compose.prod.yml logs -f
 ```
 
 System logs:
@@ -205,7 +205,7 @@ docker ps --filter "name=dreamcatcher"
 Enable debug logging:
 ```bash
 echo "DEBUG=true" >> .env
-docker-compose -f docker/docker-compose.prod.yml restart backend
+docker compose -f docker/docker-compose.prod.yml restart backend
 ```
 
 ## Maintenance
@@ -260,7 +260,7 @@ Nginx configuration includes rate limiting:
 
 Deploy multiple agent containers:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d --scale backend=3
+docker compose -f docker-compose.prod.yml up -d --scale backend=3
 ```
 
 ### Load Balancing

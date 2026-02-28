@@ -76,7 +76,9 @@ class TokenResponse(BaseModel):
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     """Dependency to get AuthService instance"""
     import os
-    secret_key = os.getenv("SECRET_KEY", "your-secret-key-here")
+    secret_key = os.getenv("SECRET_KEY")
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY environment variable is required")
     return AuthService(secret_key, db)
 
 

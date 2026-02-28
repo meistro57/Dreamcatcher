@@ -28,8 +28,8 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Check if Docker Compose is available
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ docker-compose is not installed. Please install Docker Compose."
+if ! docker compose version > /dev/null 2>&1; then
+    echo "❌ docker compose is not available. Please install Docker Compose v2."
     exit 1
 fi
 
@@ -38,15 +38,15 @@ mkdir -p logs
 
 # Stop any existing containers
 echo "🧹 Stopping any existing containers..."
-docker-compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml down
 
 # Pull latest images
 echo "📦 Pulling latest images..."
-docker-compose -f docker-compose.local.yml pull postgres redis
+docker compose -f docker-compose.local.yml pull postgres redis
 
 # Start the services
 echo "🚀 Starting services..."
-docker-compose -f docker-compose.local.yml up -d postgres redis
+docker compose -f docker-compose.local.yml up -d postgres redis
 
 # Wait for databases to be ready
 echo "⏳ Waiting for databases to be ready..."
@@ -54,7 +54,7 @@ sleep 10
 
 # Start backend and frontend
 echo "🖥️  Starting backend and frontend..."
-docker-compose -f docker-compose.local.yml up -d backend frontend
+docker compose -f docker-compose.local.yml up -d backend frontend
 
 echo ""
 echo "✅ Dreamcatcher is starting up!"
@@ -67,10 +67,10 @@ echo "   Database: localhost:5432 (dreamcatcher/dreamcatcher_password)"
 echo "   Redis: localhost:6379"
 echo ""
 echo "📊 Monitor logs with:"
-echo "   docker-compose -f docker-compose.local.yml logs -f"
+echo "   docker compose -f docker-compose.local.yml logs -f"
 echo ""
 echo "🛑 Stop with:"
-echo "   docker-compose -f docker-compose.local.yml down"
+echo "   docker compose -f docker-compose.local.yml down"
 echo ""
 echo "🔧 If you encounter issues, try:"
 echo "   ./reset-local.sh"
@@ -81,7 +81,7 @@ sleep 5
 echo "🏥 Checking service health..."
 
 # Check backend health
-if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+if curl -f http://localhost:8000/api/health > /dev/null 2>&1; then
     echo "✅ Backend is healthy"
 else
     echo "⚠️  Backend is still starting up..."
