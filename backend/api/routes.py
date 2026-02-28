@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from enum import Enum
@@ -77,7 +78,7 @@ async def health_check(db: Session = Depends(get_db)):
     db_healthy = False
     try:
         # Simple query to test database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db_healthy = True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

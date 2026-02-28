@@ -1,6 +1,6 @@
 """
 Database initialization script for authentication system
-Creates default roles and admin user
+Creates default roles and optional seeded users
 """
 
 import os
@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 def init_auth_system():
-    """Initialize authentication system with default roles and admin user"""
+    """Initialize authentication system with default roles and optional seeded users."""
     try:
         # Get database session
         db = next(get_db())
         
         # Initialize services
-        secret_key = os.getenv("SECRET_KEY", "your-secret-key-here")
+        secret_key = os.getenv("SECRET_KEY")
+        if not secret_key:
+            raise RuntimeError("SECRET_KEY environment variable is required")
         auth_service = AuthService(secret_key, db)
         role_crud = RoleCRUD(db)
         
@@ -29,46 +31,15 @@ def init_auth_system():
         logger.info("Creating default roles...")
         role_crud.create_default_roles()
         
-        # Check if admin user exists
-        admin_user = auth_service.get_user_by_email("admin@dreamcatcher.local")
-        
-        if not admin_user:
-            # Create admin user
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@dreamcatcher.local")
-            admin_username = os.getenv("ADMIN_USERNAME", "admin")
-            admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-            admin_name = os.getenv("ADMIN_NAME", "System Administrator")
-            
-            logger.info(f"Creating admin user: {admin_email}")
-            
-            admin_user = auth_service.create_user(
-                email=admin_email,
-                username=admin_username,
-                full_name=admin_name,
-                password=admin_password,
-                roles=["admin"]
-            )
-            
-            # Mark admin as verified
-            admin_user.is_verified = True
-            db.commit()
-            
-            logger.info("Admin user created successfully")
-            
-            # Security warning for default credentials
-            if admin_password == "admin123":
-                logger.warning("⚠️  WARNING: Default admin password is being used!")
-                logger.warning("⚠️  Please change the admin password immediately!")
-                logger.warning("⚠️  Set ADMIN_PASSWORD environment variable to use a secure password")
-        else:
-            logger.info("Admin user already exists")
-        
-        # Create sample regular user if in development
-        if os.getenv("ENVIRONMENT", "development") == "development":
+        logger.info("Skipping automatic admin user creation; create admin explicitly via API/CLI")
+
+        # Optionally seed test user in development when explicitly enabled
+        should_seed_test_user = os.getenv("SEED_TEST_USER", "false").lower() == "true"
+        if os.getenv("ENVIRONMENT", "development") == "development" and should_seed_test_user:
             test_user = auth_service.get_user_by_email("user@dreamcatcher.local")
             
             if not test_user:
-                logger.info("Creating test user for development")
+                logger.info("Creating test user for development (SEED_TEST_USER=true)")
                 test_user = auth_service.create_user(
                     email="user@dreamcatcher.local",
                     username="testuser",

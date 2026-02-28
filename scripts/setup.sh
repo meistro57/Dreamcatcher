@@ -75,7 +75,7 @@ mkdir -p storage/{audio,images,logs}
 
 # Set up development database
 log_info "Setting up development database..."
-docker-compose -f docker/docker-compose.yml up -d postgres redis
+docker compose -f docker/docker-compose.yml up -d postgres redis
 
 # Wait for database to be ready
 log_info "Waiting for database to be ready..."
@@ -98,6 +98,6 @@ echo "3. Start frontend: cd frontend && npm run dev"
 echo "4. Visit: http://localhost:3000"
 echo ""
 echo "🐳 Or use Docker:"
-echo "docker-compose -f docker/docker-compose.yml up"
+echo "docker compose -f docker/docker-compose.yml up"
 echo ""
 echo "Happy idea catching! 💡"

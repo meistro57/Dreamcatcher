@@ -9,11 +9,11 @@ echo "🔄 Resetting Dreamcatcher Local Development Environment..."
 
 # Stop all containers
 echo "🛑 Stopping all containers..."
-docker-compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml down
 
 # Remove containers and volumes
 echo "🧹 Removing containers and volumes..."
-docker-compose -f docker-compose.local.yml down -v
+docker compose -f docker-compose.local.yml down -v
 
 # Remove any dangling images
 echo "🗑️  Cleaning up Docker images..."

@@ -69,14 +69,14 @@ cd ..
 # Rebuild containers
 log_info "Rebuilding Docker containers..."
 cd docker
-docker-compose -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.prod.yml build --no-cache
 
 # Rolling update with health checks
 log_info "Performing rolling update..."
 
 # Update backend first
 log_info "Updating backend..."
-docker-compose -f docker-compose.prod.yml up -d --no-deps backend scheduler
+docker compose -f docker-compose.prod.yml up -d --no-deps backend scheduler
 
 # Wait for backend to be healthy
 log_info "Waiting for backend to be healthy..."
@@ -96,7 +96,7 @@ done
 
 # Update frontend
 log_info "Updating frontend..."
-docker-compose -f docker-compose.prod.yml up -d --no-deps frontend
+docker compose -f docker-compose.prod.yml up -d --no-deps frontend
 
 # Wait for frontend to be healthy
 log_info "Waiting for frontend to be healthy..."
@@ -155,7 +155,7 @@ echo "🌐 Frontend: http://localhost:3000"
 echo "🔧 Backend: http://localhost:8000"
 echo "📊 API Docs: http://localhost:8000/docs"
 echo ""
-echo "📝 View logs: docker-compose -f docker/docker-compose.prod.yml logs -f"
+echo "📝 View logs: docker compose -f docker/docker-compose.prod.yml logs -f"
 echo "💾 Backup created at: /opt/dreamcatcher/backups/"
 echo ""
 echo "The basement is now running the latest version! 🚀"

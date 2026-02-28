@@ -297,7 +297,7 @@ class DreamcatcherScheduler:
             # Check database connectivity
             try:
                 with get_db() as db:
-                    db.execute("SELECT 1")
+                    db.execute(text("SELECT 1"))
                     health_report['database'] = True
             except Exception as e:
                 logger.error(f"Database health check failed: {e}")

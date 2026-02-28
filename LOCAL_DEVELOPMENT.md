@@ -77,7 +77,7 @@ pip install -r requirements.txt
 ### 3. Start Services
 ```bash
 # Start databases (if not using local PostgreSQL/Redis)
-docker-compose -f docker-compose.local.yml up -d postgres redis
+docker compose -f docker-compose.local.yml up -d postgres redis
 
 # Start backend (in one terminal)
 cd backend
@@ -105,7 +105,7 @@ npm run dev
 ### Backend API
 - **URL**: http://localhost:8000
 - **Docs**: http://localhost:8000/docs
-- **Health**: http://localhost:8000/health
+- **Health**: http://localhost:8000/api/health
 
 ### Frontend
 - **URL**: http://localhost:3000
@@ -117,16 +117,16 @@ npm run dev
 ### Monitor Logs
 ```bash
 # All services
-docker-compose -f docker-compose.local.yml logs -f
+docker compose -f docker-compose.local.yml logs -f
 
 # Specific service
-docker-compose -f docker-compose.local.yml logs -f backend
-docker-compose -f docker-compose.local.yml logs -f frontend
+docker compose -f docker-compose.local.yml logs -f backend
+docker compose -f docker-compose.local.yml logs -f frontend
 ```
 
 ### Stop Services
 ```bash
-docker-compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml down
 ```
 
 ### Reset Everything
@@ -136,8 +136,8 @@ docker-compose -f docker-compose.local.yml down
 
 ### Rebuild Services
 ```bash
-docker-compose -f docker-compose.local.yml build
-docker-compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml build
+docker compose -f docker-compose.local.yml up -d
 ```
 
 ## Troubleshooting
@@ -150,19 +150,19 @@ docker-compose -f docker-compose.local.yml up -d
 ### Database Connection Issues
 ```bash
 # Check database health
-docker-compose -f docker-compose.local.yml exec postgres pg_isready -U dreamcatcher
+docker compose -f docker-compose.local.yml exec postgres pg_isready -U dreamcatcher
 
 # Connect to database
-docker-compose -f docker-compose.local.yml exec postgres psql -U dreamcatcher -d dreamcatcher
+docker compose -f docker-compose.local.yml exec postgres psql -U dreamcatcher -d dreamcatcher
 ```
 
 ### Backend API Errors
 ```bash
 # Check backend logs
-docker-compose -f docker-compose.local.yml logs backend
+docker compose -f docker-compose.local.yml logs backend
 
 # Check health endpoint
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 ```
 
 ### Virtual Environment Issues
@@ -186,10 +186,10 @@ pip install -r requirements.txt
 ### Frontend Build Issues
 ```bash
 # Check frontend logs
-docker-compose -f docker-compose.local.yml logs frontend
+docker compose -f docker-compose.local.yml logs frontend
 
 # Rebuild frontend
-docker-compose -f docker-compose.local.yml build frontend
+docker compose -f docker-compose.local.yml build frontend
 ```
 
 ## Development Workflow
@@ -203,15 +203,15 @@ Both frontend and backend support hot reload:
 If you modify database models:
 ```bash
 # Restart backend to apply migrations
-docker-compose -f docker-compose.local.yml restart backend
+docker compose -f docker-compose.local.yml restart backend
 ```
 
 ### Environment Changes
 After modifying `.env`:
 ```bash
 # Restart all services
-docker-compose -f docker-compose.local.yml down
-docker-compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml up -d
 ```
 
 ## Optional: ComfyUI Integration
@@ -274,7 +274,7 @@ Once you have Dreamcatcher running locally:
 If you encounter issues:
 
 1. Check the [troubleshooting section](#troubleshooting)
-2. Review the logs: `docker-compose -f docker-compose.local.yml logs`
+2. Review the logs: `docker compose -f docker-compose.local.yml logs`
 3. Reset everything: `./reset-local.sh`
 4. Check the main [README.md](README.md) for more details
 

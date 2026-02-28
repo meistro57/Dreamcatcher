@@ -39,7 +39,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - COMFY_API_URL=${COMFY_API_URL:-http://localhost:8188}
-      - SECRET_KEY=${SECRET_KEY:-dev_secret_key}
+      - SECRET_KEY=${SECRET_KEY}
     ports:
       - "8000:8000"
     depends_on:
@@ -57,8 +57,8 @@ services:
       dockerfile: Dockerfile
     container_name: dreamcatcher-frontend
     environment:
-      - VITE_API_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000/ws
+      - VITE_API_URL=http://localhost:8000/api
+      - VITE_WS_URL=ws://localhost:8000/api/ws
     ports:
       - "3000:3000"
     restart: unless-stopped

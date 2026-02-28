@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
@@ -58,7 +58,7 @@ class DatabaseManager:
         """Check database connectivity"""
         try:
             with get_db() as db:
-                db.execute("SELECT 1")
+                db.execute(text("SELECT 1"))
                 return True
         except Exception:
             return False
