@@ -480,7 +480,9 @@ Get runtime API key configuration status (secrets are never returned).
   "openai_configured": false,
   "openrouter_configured": true,
   "ai_available": true,
-  "can_persist_to_env": true
+  "can_persist_to_env": true,
+  "default_model": "openrouter/openai/gpt-4o-mini",
+  "available_models": ["claude-3-haiku", "gpt-4", "openrouter/openai/gpt-4o-mini"]
 }
 ```
 
@@ -498,6 +500,26 @@ Update runtime API keys.
 ```
 
 `persist_to_env` requires system-actions permission and writes keys to the local `.env`.
+
+#### GET `/settings/ai-models`
+Get model catalog for UI selection.
+
+**Query Parameters:**
+- `include_openrouter_dynamic`: include live OpenRouter model catalog (`true`/`false`, default `true`)
+- `refresh_openrouter`: force refresh OpenRouter model cache (`true`/`false`, default `false`)
+
+#### POST `/settings/ai-model`
+Set runtime default AI model.
+
+**Request:**
+```json
+{
+  "model": "openrouter/openai/gpt-4o-mini",
+  "persist_to_env": true
+}
+```
+
+`persist_to_env` requires system-actions permission and writes `DEFAULT_AI_MODEL` to local `.env`.
 
 #### POST `/agents/{agent_id}/message`
 Send message to a specific agent.

@@ -70,6 +70,9 @@ const SettingsPage = () => {
     openai_configured: boolean
     openrouter_configured: boolean
     ai_available: boolean
+    default_model?: string | null
+    available_models?: string[]
+    can_persist_to_env?: boolean
   } | null>(null)
   const [apiKeyForm, setApiKeyForm] = useState({
     anthropic_api_key: '',
@@ -77,6 +80,12 @@ const SettingsPage = () => {
     openrouter_api_key: ''
   })
   const [persistApiKeys, setPersistApiKeys] = useState(false)
+  const [aiModelsLoading, setAiModelsLoading] = useState(false)
+  const [aiModelsError, setAiModelsError] = useState<string | null>(null)
+  const [availableAiModels, setAvailableAiModels] = useState<string[]>([])
+  const [selectedDefaultModel, setSelectedDefaultModel] = useState('')
+  const [persistDefaultModel, setPersistDefaultModel] = useState(false)
+  const [updatingDefaultModel, setUpdatingDefaultModel] = useState(false)
   const [adminRecoveryLoading, setAdminRecoveryLoading] = useState(false)
   const [adminRecoveryStatus, setAdminRecoveryStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [adminUserSearch, setAdminUserSearch] = useState('')
@@ -252,6 +261,56 @@ const SettingsPage = () => {
     }
   }
 
+  const loadAiModels = async (refreshOpenRouter = false) => {
+    setAiModelsLoading(true)
+    setAiModelsError(null)
+    try {
+      const response = await api.settings.aiModels({
+        include_openrouter_dynamic: true,
+        refresh_openrouter: refreshOpenRouter,
+      })
+
+      const staticModels = Array.isArray(response.data?.available_models) ? response.data.available_models : []
+      const dynamicModels = Array.isArray(response.data?.openrouter_dynamic_models)
+        ? response.data.openrouter_dynamic_models.map((model: any) => model.id).filter(Boolean)
+        : []
+      const merged = Array.from(new Set([...staticModels, ...dynamicModels])).sort()
+
+      setAvailableAiModels(merged)
+      const currentDefault = response.data?.default_model || ''
+      setSelectedDefaultModel(currentDefault || (merged[0] || ''))
+    } catch (error: any) {
+      setAiModelsError(error?.response?.data?.detail || 'Failed to load AI models')
+    } finally {
+      setAiModelsLoading(false)
+    }
+  }
+
+  const updateDefaultAiModel = async () => {
+    setAiModelsError(null)
+    setApiKeysSuccess(null)
+    if (!selectedDefaultModel) {
+      setAiModelsError('Choose a model first')
+      return
+    }
+
+    setUpdatingDefaultModel(true)
+    try {
+      const response = await api.settings.setDefaultAiModel({
+        model: selectedDefaultModel,
+        persist_to_env: persistDefaultModel,
+      })
+      const persistedText = response.data?.persisted_to_env ? ' and persisted to .env' : ''
+      setApiKeysSuccess(`Default model set to ${response.data?.default_model || selectedDefaultModel}${persistedText}`)
+      await loadApiKeyStatus()
+      await loadAiModels(false)
+    } catch (error: any) {
+      setAiModelsError(error?.response?.data?.detail || 'Failed to update default model')
+    } finally {
+      setUpdatingDefaultModel(false)
+    }
+  }
+
   const saveApiKeys = async () => {
     setApiKeysError(null)
     setApiKeysSuccess(null)
@@ -281,6 +340,7 @@ const SettingsPage = () => {
         openrouter_api_key: ''
       })
       await loadApiKeyStatus()
+      await loadAiModels(true)
     } catch (error: any) {
       setApiKeysError(error?.response?.data?.detail || 'Failed to update API keys')
     } finally {
@@ -376,6 +436,7 @@ const SettingsPage = () => {
     void loadSystemActionHistory()
     void loadRecentLogs()
     void loadApiKeyStatus()
+    void loadAiModels()
   }, [activeTab])
 
   return (
@@ -979,6 +1040,80 @@ const SettingsPage = () => {
 
               <button onClick={saveApiKeys} disabled={apiKeysSaving} className="btn btn-primary disabled:opacity-50">
                 {apiKeysSaving ? 'Updating...' : 'Update Runtime API Keys'}
+              </button>
+            </div>
+
+            <div className="card p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <Bot className="w-6 h-6 text-primary-500" />
+                  <h2 className="text-xl font-semibold text-white">Default AI Model</h2>
+                </div>
+                <button onClick={() => loadAiModels(true)} className="btn btn-secondary flex items-center space-x-2">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Refresh Model List</span>
+                </button>
+              </div>
+
+              <p className="text-dark-300 text-sm mb-4">
+                Select which model the backend uses by default for AI generation. OpenRouter models appear when an OpenRouter key is configured.
+              </p>
+
+              {aiModelsError && (
+                <div className="mb-4 text-sm text-red-300 bg-red-900/20 border border-red-700 rounded-md px-3 py-2">
+                  {aiModelsError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <div className="rounded-lg border border-dark-600 bg-dark-800/70 p-4">
+                  <p className="text-dark-300 text-sm">Current Default</p>
+                  <p className="text-sm font-medium text-green-300 break-words">{apiKeyStatus?.default_model || 'Not set'}</p>
+                </div>
+                <div className="rounded-lg border border-dark-600 bg-dark-800/70 p-4 md:col-span-2">
+                  <label className="block text-white font-medium mb-2">Select Model</label>
+                  <select
+                    value={selectedDefaultModel}
+                    onChange={(e) => setSelectedDefaultModel(e.target.value)}
+                    className="input w-full"
+                    disabled={aiModelsLoading || !availableAiModels.length}
+                  >
+                    {!availableAiModels.length && <option value="">No models available</option>}
+                    {availableAiModels.map((model) => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mb-4 p-3 rounded-lg border border-dark-600 bg-dark-800/40">
+                <div>
+                  <p className="text-white font-medium text-sm">Persist default model to .env</p>
+                  <p className="text-dark-300 text-xs">
+                    {apiKeyStatus?.can_persist_to_env
+                      ? 'Save DEFAULT_AI_MODEL so selection survives backend restarts.'
+                      : 'Requires system actions permission.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPersistDefaultModel((prev) => !prev)}
+                  disabled={!apiKeyStatus?.can_persist_to_env}
+                  className={`w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${
+                    persistDefaultModel ? 'bg-primary-600' : 'bg-dark-600'
+                  }`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                    persistDefaultModel ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+
+              <button
+                onClick={updateDefaultAiModel}
+                disabled={updatingDefaultModel || aiModelsLoading || !selectedDefaultModel}
+                className="btn btn-primary disabled:opacity-50"
+              >
+                {updatingDefaultModel ? 'Updating model...' : 'Set Default AI Model'}
               </button>
             </div>
 

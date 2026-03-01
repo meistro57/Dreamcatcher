@@ -14,6 +14,8 @@ from api.auth_routes import (
 from api.routes import (
     update_api_keys,
     ApiKeysUpdateRequest,
+    AiModelUpdateRequest,
+    set_default_ai_model,
     run_system_action,
     get_system_actions_history,
 )
@@ -156,3 +158,55 @@ async def test_system_action_history_records_success(monkeypatch):
         os.environ.pop("SYSTEM_ACTION_AUDIT_FILE", None)
     else:
         os.environ["SYSTEM_ACTION_AUDIT_FILE"] = original_audit
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_set_default_ai_model_requires_permission_when_persisting():
+    original_enabled = os.environ.get("ENABLE_SYSTEM_ACTIONS")
+    original_users = os.environ.get("SYSTEM_ACTION_USERS")
+    os.environ["ENABLE_SYSTEM_ACTIONS"] = "true"
+    os.environ["SYSTEM_ACTION_USERS"] = "admin"
+
+    with pytest.raises(HTTPException) as exc:
+        await set_default_ai_model(
+            payload=AiModelUpdateRequest(
+                model="gpt-4",
+                persist_to_env=True,
+            ),
+            current_user=SimpleNamespace(username="user"),
+        )
+
+    assert exc.value.status_code == 403
+
+    if original_enabled is None:
+        os.environ.pop("ENABLE_SYSTEM_ACTIONS", None)
+    else:
+        os.environ["ENABLE_SYSTEM_ACTIONS"] = original_enabled
+
+    if original_users is None:
+        os.environ.pop("SYSTEM_ACTION_USERS", None)
+    else:
+        os.environ["SYSTEM_ACTION_USERS"] = original_users
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_set_default_ai_model_updates_runtime(monkeypatch):
+    from api import routes
+
+    class StubAiService:
+        default_model = "claude-3-haiku"
+
+        def set_default_model(self, model: str):
+            self.default_model = model
+            return model
+
+    monkeypatch.setattr(routes, "ai_service", StubAiService())
+    result = await set_default_ai_model(
+        payload=AiModelUpdateRequest(model="openrouter/openai/gpt-4o-mini", persist_to_env=False),
+        current_user=SimpleNamespace(username="admin"),
+    )
+
+    assert result["default_model"] == "openrouter/openai/gpt-4o-mini"
+    assert result["persisted_to_env"] is False

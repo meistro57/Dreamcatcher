@@ -138,6 +138,10 @@ export const api = {
       openrouter_api_key?: string
       persist_to_env?: boolean
     }) => apiClient.post('/settings/api-keys', data),
+    aiModels: (params?: { include_openrouter_dynamic?: boolean; refresh_openrouter?: boolean }) =>
+      apiClient.get('/settings/ai-models', { params }),
+    setDefaultAiModel: (data: { model: string; persist_to_env?: boolean }) =>
+      apiClient.post('/settings/ai-model', data),
   },
 }
 

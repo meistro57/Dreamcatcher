@@ -41,6 +41,7 @@ A 24/7 self-hosted system that:
 - ✅ **Semantic Search System** with vector embeddings, similarity search, and intelligent idea discovery
 - ✅ **System Operations Panel** with guarded restart/rebuild actions for local Docker development
 - ✅ **System Log Viewer** with recent log filters plus semantic log search/backfill controls
+- ✅ **OpenRouter Model Selection** with runtime default-model chooser in Settings
 - ✅ **Comprehensive Documentation** with complete CLAUDE.md for future development
 
 ## Architecture Overview
@@ -192,6 +193,7 @@ Use [.env.production.example](.env.production.example) as your production templa
 - **System Actions**: Optional guarded controls to restart/rebuild backend/frontend from Settings -> System
 - **System Action Audit Trail**: Per-action history (actor, timestamp, duration, status) in Settings -> System
 - **Runtime API Key Manager**: Update provider keys from Settings -> System, with optional `.env` persistence for local/dev
+- **Model Selection**: Choose the backend default AI model (including OpenRouter models) from Settings -> System
 - **Processing Watchdog**: Automatically marks long-stuck ideas as `failed` to prevent infinite `processing` states
 
 ### Advanced Capabilities

@@ -73,10 +73,12 @@ class AIService:
         self.openrouter_client = None
 
         # Configuration
-        self.default_model = "claude-3-haiku"
+        self.default_model = os.getenv("DEFAULT_AI_MODEL", "").strip() or None
         self.rate_limit_delay = 1.0  # seconds between requests
         self.max_retries = 3
         self.timeout = 30.0  # seconds
+        self._openrouter_models_cache: List[Dict[str, Any]] = []
+        self._openrouter_models_cache_at: Optional[datetime] = None
         
         # Usage tracking
         self.usage_stats = {
@@ -91,6 +93,7 @@ class AIService:
         
         # Initialize available clients
         self._initialize_clients()
+        self._sync_default_model()
     
     def _initialize_clients(self):
         """Initialize AI service clients with proper error handling"""
@@ -170,6 +173,77 @@ class AIService:
                 "openrouter/mistralai/mistral-large"
             ])
         return models
+
+    def _sync_default_model(self) -> None:
+        """Ensure default model is set to a currently available model."""
+        available_models = self.get_available_models()
+        if not available_models:
+            self.default_model = None
+            return
+
+        if self.default_model and self.default_model in available_models:
+            return
+
+        self.default_model = available_models[0]
+
+    def set_default_model(self, model: str) -> str:
+        """Set runtime default model if available."""
+        available_models = self.get_available_models()
+        if model not in available_models:
+            raise ValueError(f"Model '{model}' is not available")
+        self.default_model = model
+        return self.default_model
+
+    def get_model_catalog(self, include_openrouter_dynamic: bool = False, refresh_openrouter: bool = False) -> Dict[str, Any]:
+        """Return grouped model information for UI/API consumption."""
+        available_models = self.get_available_models()
+        catalog = {
+            "default_model": self.default_model,
+            "available_models": available_models,
+            "providers": {
+                "claude": [m for m in available_models if m.startswith("claude")],
+                "openai": [m for m in available_models if m.startswith("gpt")],
+                "openrouter": [m for m in available_models if m.startswith("openrouter/")],
+            },
+            "openrouter_dynamic_models": [],
+        }
+        if include_openrouter_dynamic:
+            catalog["openrouter_dynamic_models"] = self.get_openrouter_dynamic_models(refresh=refresh_openrouter)
+        return catalog
+
+    def get_openrouter_dynamic_models(self, refresh: bool = False) -> List[Dict[str, Any]]:
+        """Fetch OpenRouter model list (normalized) and cache briefly."""
+        if not self.openrouter_client:
+            return []
+
+        cache_valid = (
+            self._openrouter_models_cache_at is not None
+            and (datetime.utcnow() - self._openrouter_models_cache_at).total_seconds() < 600
+        )
+        if not refresh and cache_valid:
+            return self._openrouter_models_cache
+
+        try:
+            response = self.openrouter_client.models.list()
+            raw_models = getattr(response, "data", []) or []
+            normalized: List[Dict[str, Any]] = []
+            for model in raw_models:
+                model_id = getattr(model, "id", None)
+                if not model_id:
+                    continue
+                normalized.append({
+                    "id": f"openrouter/{model_id}",
+                    "provider_id": model_id,
+                    "name": getattr(model, "name", model_id),
+                    "context_length": getattr(model, "context_length", None),
+                })
+            normalized.sort(key=lambda item: item["id"])
+            self._openrouter_models_cache = normalized
+            self._openrouter_models_cache_at = datetime.utcnow()
+            return normalized
+        except Exception as exc:
+            self.logger.warning(f"Unable to fetch OpenRouter dynamic model list: {exc}")
+            return self._openrouter_models_cache
     
     def _validate_inputs(self, prompt: str, max_tokens: int, temperature: float):
         """Validate inputs with descriptive error messages"""
@@ -310,14 +384,10 @@ class AIService:
     
     def _get_default_model(self) -> str:
         """Get default model based on availability"""
-        if self.claude_client:
-            return "claude-3-haiku"
-        elif self.openai_client:
-            return "gpt-3.5-turbo"
-        elif self.openrouter_client:
-            return "openrouter/anthropic/claude-3-haiku"
-        else:
+        self._sync_default_model()
+        if not self.default_model:
             raise AIServiceUnavailableError("No AI clients available")
+        return self.default_model
     
     async def _generate_with_model(
         self,

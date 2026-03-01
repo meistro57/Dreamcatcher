@@ -62,6 +62,11 @@ class ApiKeysUpdateRequest(BaseModel):
     openrouter_api_key: Optional[str] = None
     persist_to_env: bool = False
 
+
+class AiModelUpdateRequest(BaseModel):
+    model: str
+    persist_to_env: bool = False
+
 # Initialize router
 router = APIRouter()
 security = HTTPBearer()
@@ -418,7 +423,55 @@ async def get_api_keys_status(current_user: User = Depends(get_current_user)):
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY")),
         "ai_available": ai_service.is_available(),
-        "can_persist_to_env": _is_system_actions_enabled_for_user(current_user)
+        "can_persist_to_env": _is_system_actions_enabled_for_user(current_user),
+        "default_model": ai_service.default_model,
+        "available_models": ai_service.get_available_models(),
+    }
+
+
+@router.get("/settings/ai-models")
+async def get_ai_models(
+    include_openrouter_dynamic: bool = True,
+    refresh_openrouter: bool = False,
+    current_user: User = Depends(get_current_user)
+):
+    """List available AI models, including OpenRouter catalog when enabled."""
+    del current_user  # endpoint is auth-protected and user identity is not needed yet
+    return ai_service.get_model_catalog(
+        include_openrouter_dynamic=include_openrouter_dynamic,
+        refresh_openrouter=refresh_openrouter,
+    )
+
+
+@router.post("/settings/ai-model")
+async def set_default_ai_model(
+    payload: AiModelUpdateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Set runtime default AI model and optionally persist to .env."""
+    if payload.persist_to_env and not _is_system_actions_enabled_for_user(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Persisting default AI model requires system actions permission."
+        )
+
+    try:
+        selected_model = ai_service.set_default_model(payload.model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    persisted = False
+    persisted_path = None
+    if payload.persist_to_env:
+        env_path = _persist_env_values({"DEFAULT_AI_MODEL": selected_model})
+        persisted = bool(env_path)
+        persisted_path = str(env_path) if env_path else None
+
+    return {
+        "message": "Default AI model updated",
+        "default_model": selected_model,
+        "persisted_to_env": persisted,
+        "env_path": persisted_path,
     }
 
 
