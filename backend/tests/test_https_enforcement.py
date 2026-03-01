@@ -7,6 +7,8 @@ def test_https_redirect_middleware_enabled_in_production(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", '["https://dreamcatcher.example.com"]')
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("FORCE_HTTPS", "true")
+    monkeypatch.setenv("SECRET_KEY", "x" * 48)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     import main as main_module
     reloaded = importlib.reload(main_module)
@@ -20,6 +22,8 @@ def test_https_redirect_middleware_disabled_when_force_false(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", '["https://dreamcatcher.example.com"]')
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("FORCE_HTTPS", "false")
+    monkeypatch.setenv("SECRET_KEY", "x" * 48)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
 
     import main as main_module
     reloaded = importlib.reload(main_module)

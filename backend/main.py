@@ -63,6 +63,48 @@ ALLOWED_CORS_ORIGINS = _parse_cors_origins()
 IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 
+def _is_placeholder_secret(value: str) -> bool:
+    normalized = value.strip().lower()
+    return normalized in {
+        "",
+        "changeme",
+        "change_me",
+        "your_secret_key_here",
+        "your_secret_key_here_generate_with_openssl_rand_base64_32",
+    } or "your_" in normalized
+
+
+def _validate_production_environment() -> None:
+    """Fail fast when production secrets/config are missing."""
+    if not IS_PRODUCTION:
+        return
+
+    required = ["SECRET_KEY", "CORS_ORIGINS"]
+    missing = [key for key in required if not os.getenv(key)]
+    if missing:
+        raise RuntimeError(
+            f"Missing required production env vars: {', '.join(missing)}"
+        )
+
+    secret_key = os.getenv("SECRET_KEY", "")
+    if _is_placeholder_secret(secret_key) or len(secret_key.strip()) < 32:
+        raise RuntimeError("SECRET_KEY must be set to a strong non-placeholder value in production")
+
+    ai_keys = [
+        os.getenv("ANTHROPIC_API_KEY", "").strip(),
+        os.getenv("OPENAI_API_KEY", "").strip(),
+        os.getenv("OPENROUTER_API_KEY", "").strip(),
+    ]
+    if not any(ai_keys):
+        raise RuntimeError(
+            "At least one AI provider key must be set in production "
+            "(ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY)"
+        )
+
+
+_validate_production_environment()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""

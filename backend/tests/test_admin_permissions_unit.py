@@ -1,6 +1,7 @@
 import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+import tempfile
 
 import pytest
 from fastapi import HTTPException
@@ -10,7 +11,12 @@ from api.auth_routes import (
     admin_reset_user_password,
     AdminResetPasswordRequest,
 )
-from api.routes import update_api_keys, ApiKeysUpdateRequest
+from api.routes import (
+    update_api_keys,
+    ApiKeysUpdateRequest,
+    run_system_action,
+    get_system_actions_history,
+)
 
 
 @pytest.mark.asyncio
@@ -99,3 +105,54 @@ async def test_persist_api_keys_requires_system_action_permission():
         os.environ.pop("OPENAI_API_KEY", None)
     else:
         os.environ["OPENAI_API_KEY"] = original_openai
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_system_action_history_records_success(monkeypatch):
+    original_enabled = os.environ.get("ENABLE_SYSTEM_ACTIONS")
+    original_users = os.environ.get("SYSTEM_ACTION_USERS")
+    original_audit = os.environ.get("SYSTEM_ACTION_AUDIT_FILE")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        audit_file = os.path.join(temp_dir, "audit.jsonl")
+        os.environ["ENABLE_SYSTEM_ACTIONS"] = "true"
+        os.environ["SYSTEM_ACTION_USERS"] = "admin"
+        os.environ["SYSTEM_ACTION_AUDIT_FILE"] = audit_file
+
+        async def fake_run(_action: str):
+            return {
+                "success": True,
+                "action": "restart_backend",
+                "steps": [{"command": "echo ok", "return_code": 0}],
+            }
+
+        from api import routes
+        monkeypatch.setattr(routes, "_run_system_action", fake_run)
+
+        result = await run_system_action("restart_backend", current_user=SimpleNamespace(username="admin"))
+        history = await get_system_actions_history(
+            limit=10,
+            status=None,
+            current_user=SimpleNamespace(username="admin"),
+        )
+
+        assert result["success"] is True
+        assert history["count"] >= 1
+        assert history["entries"][0]["action"] == "restart_backend"
+        assert history["entries"][0]["status"] == "success"
+
+    if original_enabled is None:
+        os.environ.pop("ENABLE_SYSTEM_ACTIONS", None)
+    else:
+        os.environ["ENABLE_SYSTEM_ACTIONS"] = original_enabled
+
+    if original_users is None:
+        os.environ.pop("SYSTEM_ACTION_USERS", None)
+    else:
+        os.environ["SYSTEM_ACTION_USERS"] = original_users
+
+    if original_audit is None:
+        os.environ.pop("SYSTEM_ACTION_AUDIT_FILE", None)
+    else:
+        os.environ["SYSTEM_ACTION_AUDIT_FILE"] = original_audit

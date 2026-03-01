@@ -13,6 +13,7 @@ import tempfile
 import os
 from pathlib import Path
 from importlib import import_module
+from uuid import uuid4
 
 try:  # pragma: no cover - import flexibility for tests and runtime
     from ..database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD
@@ -74,6 +75,8 @@ ws_manager = WebSocketManager()
 logger = logging.getLogger("api.routes")
 
 SYSTEM_ACTION_TIMEOUT_SECONDS = 900
+SYSTEM_ACTION_HISTORY_DEFAULT_LIMIT = 50
+SYSTEM_ACTION_HISTORY_MAX_LIMIT = 500
 
 # Initialize agents
 listener_agent = AgentListener()
@@ -140,6 +143,64 @@ def _resolve_env_file() -> Optional[Path]:
         if candidate.exists():
             return candidate
     return None
+
+
+def _resolve_system_action_audit_file() -> Path:
+    configured = os.getenv("SYSTEM_ACTION_AUDIT_FILE")
+    if configured:
+        return Path(configured)
+
+    candidates = [
+        Path.cwd() / "logs" / "system_actions_audit.jsonl",
+        Path.cwd().parent / "logs" / "system_actions_audit.jsonl",
+        Path("/home/mark/Dreamcatcher/logs/system_actions_audit.jsonl"),
+    ]
+    for candidate in candidates:
+        parent = candidate.parent
+        if parent.exists():
+            return candidate
+
+    return Path.cwd() / "logs" / "system_actions_audit.jsonl"
+
+
+def _append_system_action_audit(entry: Dict[str, Any]) -> None:
+    try:
+        audit_path = _resolve_system_action_audit_file()
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        with audit_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, default=str) + "\n")
+    except Exception as exc:
+        logger.warning(f"Failed to write system action audit entry: {exc}")
+
+
+def _read_system_action_audit(limit: int, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    audit_path = _resolve_system_action_audit_file()
+    if not audit_path.exists():
+        return []
+
+    entries: List[Dict[str, Any]] = []
+    try:
+        lines = audit_path.read_text(encoding="utf-8").splitlines()
+    except Exception as exc:
+        logger.warning(f"Failed to read system action audit log: {exc}")
+        return []
+
+    for line in reversed(lines):
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        if status and item.get("status") != status:
+            continue
+
+        entries.append(item)
+        if len(entries) >= limit:
+            break
+
+    return entries
 
 def _persist_env_values(updates: Dict[str, str]) -> Optional[Path]:
     env_file = _resolve_env_file()
@@ -271,6 +332,27 @@ async def get_system_actions_status(current_user: User = Depends(get_current_use
         )
     }
 
+
+@router.get("/system/actions/history")
+async def get_system_actions_history(
+    limit: int = SYSTEM_ACTION_HISTORY_DEFAULT_LIMIT,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+):
+    """Return recent system action execution history for authorized users."""
+    if not _is_system_actions_enabled_for_user(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="System actions disabled for this user. Configure ENABLE_SYSTEM_ACTIONS and SYSTEM_ACTION_USERS."
+        )
+
+    if status and status not in {"success", "failed"}:
+        raise HTTPException(status_code=400, detail="status must be either 'success' or 'failed'")
+
+    sanitized_limit = max(1, min(limit, SYSTEM_ACTION_HISTORY_MAX_LIMIT))
+    entries = _read_system_action_audit(sanitized_limit, status=status)
+    return {"count": len(entries), "entries": entries}
+
 @router.post("/system/actions/{action}")
 async def run_system_action(action: str, current_user: User = Depends(get_current_user)):
     """Run a guarded system action such as restart/rebuild."""
@@ -280,7 +362,49 @@ async def run_system_action(action: str, current_user: User = Depends(get_curren
             detail="System actions disabled for this user. Configure ENABLE_SYSTEM_ACTIONS and SYSTEM_ACTION_USERS."
         )
 
-    result = await _run_system_action(action)
+    started_at = datetime.utcnow()
+    actor = getattr(current_user, "username", None) or getattr(current_user, "email", "unknown")
+    audit_id = str(uuid4())
+
+    try:
+        result = await _run_system_action(action)
+    except HTTPException as exc:
+        duration_ms = int((datetime.utcnow() - started_at).total_seconds() * 1000)
+        _append_system_action_audit({
+            "id": audit_id,
+            "timestamp": started_at.isoformat(),
+            "completed_at": datetime.utcnow().isoformat(),
+            "actor": actor,
+            "action": action,
+            "status": "failed",
+            "duration_ms": duration_ms,
+            "error": exc.detail,
+            "steps": [],
+        })
+        raise
+
+    duration_ms = int((datetime.utcnow() - started_at).total_seconds() * 1000)
+    audit_entry = {
+        "id": audit_id,
+        "timestamp": started_at.isoformat(),
+        "completed_at": datetime.utcnow().isoformat(),
+        "actor": actor,
+        "action": action,
+        "status": "success" if result.get("success") else "failed",
+        "duration_ms": duration_ms,
+        "steps": [
+            {
+                "command": step.get("command"),
+                "return_code": step.get("return_code"),
+            }
+            for step in result.get("steps", [])
+        ],
+    }
+    if not result.get("success"):
+        audit_entry["error"] = "System action step failed"
+
+    _append_system_action_audit(audit_entry)
+
     if not result["success"]:
         raise HTTPException(status_code=500, detail=result)
     return result

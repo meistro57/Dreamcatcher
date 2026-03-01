@@ -125,6 +125,8 @@ export const api = {
 
   system: {
     actionsStatus: () => apiClient.get('/system/actions'),
+    actionsHistory: (params?: { limit?: number; status?: 'success' | 'failed' }) =>
+      apiClient.get('/system/actions/history', { params }),
     runAction: (action: string) => apiClient.post(`/system/actions/${action}`),
   },
 

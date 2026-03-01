@@ -588,6 +588,24 @@ System actions are disabled by default and require:
 - `ENABLE_SYSTEM_ACTIONS=true`
 - `SYSTEM_ACTION_USERS` containing the logged-in username
 
+#### GET `/system/actions/history`
+Get recent guarded system action execution history.
+
+**Query Parameters:**
+- `limit`: Max records (default: `50`, max: `500`)
+- `status`: Optional filter (`success` or `failed`)
+
+**Response Fields:**
+- `id`: Audit event id
+- `timestamp`: Action start time
+- `completed_at`: Action completion time
+- `actor`: Username that triggered action
+- `action`: Action name
+- `status`: `success` or `failed`
+- `duration_ms`: Runtime in milliseconds
+
+History is stored in `SYSTEM_ACTION_AUDIT_FILE` (default: `./logs/system_actions_audit.jsonl`).
+
 ### System Monitoring
 
 #### GET `/metrics`

@@ -162,6 +162,7 @@ For production deployment with domain:
    ```bash
    sudo ./deploy.sh
    ```
+   Deployment now runs `scripts/preflight-production.sh` and will stop if required production secrets/keys are missing.
 
 3. **Configure API keys**
    ```bash
@@ -173,6 +174,7 @@ For production deployment with domain:
 📖 **Detailed production setup**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 Production mode enforces HTTPS when `ENVIRONMENT=production` and `FORCE_HTTPS=true`.
+Use [.env.production.example](.env.production.example) as your production template.
 
 ## Features
 
@@ -188,6 +190,7 @@ Production mode enforces HTTPS when `ENVIRONMENT=production` and `FORCE_HTTPS=tr
 - **Related Ideas**: Automatic detection of conceptually similar ideas
 - **System Log Viewer**: Inspect agent/system logs directly from Settings -> System
 - **System Actions**: Optional guarded controls to restart/rebuild backend/frontend from Settings -> System
+- **System Action Audit Trail**: Per-action history (actor, timestamp, duration, status) in Settings -> System
 - **Runtime API Key Manager**: Update provider keys from Settings -> System, with optional `.env` persistence for local/dev
 - **Processing Watchdog**: Automatically marks long-stuck ideas as `failed` to prevent infinite `processing` states
 
@@ -228,6 +231,7 @@ Add these to `.env` to enable them:
 ```env
 ENABLE_SYSTEM_ACTIONS=true
 SYSTEM_ACTION_USERS=user,admin
+SYSTEM_ACTION_AUDIT_FILE=./logs/system_actions_audit.jsonl
 IDEA_PROCESSING_TIMEOUT_MINUTES=15
 ```
 

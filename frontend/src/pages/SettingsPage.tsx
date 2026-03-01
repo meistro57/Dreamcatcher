@@ -58,6 +58,9 @@ const SettingsPage = () => {
   const [systemActions, setSystemActions] = useState<string[]>([])
   const [runningAction, setRunningAction] = useState<string | null>(null)
   const [actionOutput, setActionOutput] = useState<string>('')
+  const [systemHistoryLoading, setSystemHistoryLoading] = useState(false)
+  const [systemHistoryError, setSystemHistoryError] = useState<string | null>(null)
+  const [systemHistory, setSystemHistory] = useState<any[]>([])
   const [apiKeysLoading, setApiKeysLoading] = useState(false)
   const [apiKeysSaving, setApiKeysSaving] = useState(false)
   const [apiKeysError, setApiKeysError] = useState<string | null>(null)
@@ -223,6 +226,19 @@ const SettingsPage = () => {
     }
   }
 
+  const loadSystemActionHistory = async () => {
+    setSystemHistoryLoading(true)
+    setSystemHistoryError(null)
+    try {
+      const response = await api.system.actionsHistory({ limit: 50 })
+      setSystemHistory(Array.isArray(response.data?.entries) ? response.data.entries : [])
+    } catch (error: any) {
+      setSystemHistoryError(error?.response?.data?.detail || 'Failed to load action history')
+    } finally {
+      setSystemHistoryLoading(false)
+    }
+  }
+
   const loadApiKeyStatus = async () => {
     setApiKeysLoading(true)
     setApiKeysError(null)
@@ -287,6 +303,7 @@ const SettingsPage = () => {
       setActionOutput(output || 'Action completed')
       await loadAgents()
       await loadLogStats()
+      await loadSystemActionHistory()
     } catch (error: any) {
       const detail = error?.response?.data?.detail
       if (detail && typeof detail === 'object' && Array.isArray(detail.steps)) {
@@ -356,6 +373,7 @@ const SettingsPage = () => {
     void loadAgents()
     void loadLogStats()
     void loadSystemActions()
+    void loadSystemActionHistory()
     void loadRecentLogs()
     void loadApiKeyStatus()
   }, [activeTab])
@@ -974,6 +992,10 @@ const SettingsPage = () => {
                   <RefreshCw className="w-4 h-4" />
                   <span>Refresh</span>
                 </button>
+                <button onClick={loadSystemActionHistory} className="btn btn-secondary flex items-center space-x-2">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Reload History</span>
+                </button>
               </div>
 
               {systemActionsError && (
@@ -1010,6 +1032,41 @@ const SettingsPage = () => {
                 <pre className="bg-dark-800 border border-dark-600 rounded-lg p-3 text-xs text-dark-200 overflow-auto max-h-64 whitespace-pre-wrap">
                   {actionOutput || 'No action run yet.'}
                 </pre>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-white font-medium mb-2">Action History</h3>
+                {systemHistoryError && (
+                  <div className="mb-3 text-sm text-red-300 bg-red-900/20 border border-red-700 rounded-md px-3 py-2">
+                    {systemHistoryError}
+                  </div>
+                )}
+                {systemHistoryLoading ? (
+                  <p className="text-dark-300 text-sm">Loading action history...</p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-auto">
+                    {systemHistory.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-dark-600 bg-dark-800/70 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-white text-sm font-medium">{String(item.action || '').replaceAll('_', ' ')}</p>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            item.status === 'success'
+                              ? 'bg-green-700/40 text-green-300'
+                              : 'bg-red-700/30 text-red-300'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-dark-300 text-xs mt-1">
+                          by {item.actor || 'unknown'} · {item.timestamp ? new Date(item.timestamp).toLocaleString() : 'unknown time'} · {item.duration_ms ?? 0}ms
+                        </p>
+                      </div>
+                    ))}
+                    {!systemHistory.length && (
+                      <p className="text-dark-400 text-sm">No actions recorded yet.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

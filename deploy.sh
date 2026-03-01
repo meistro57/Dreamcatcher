@@ -511,12 +511,19 @@ deploy_application() {
     cd ..
 }
 
+run_production_preflight() {
+    log_info "Running production preflight checks..."
+    ./scripts/preflight-production.sh .env
+    log_success "Preflight checks passed"
+}
+
 main() {
     log_info "🧠 Dreamcatcher Deployment Starting..."
     
     check_requirements
     setup_directories
     setup_environment
+    run_production_preflight
     setup_ssl
     setup_nginx_config
     update_docker_compose

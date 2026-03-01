@@ -34,6 +34,7 @@
    ```bash
    sudo ./deploy.sh
    ```
+   This runs a production preflight (`scripts/preflight-production.sh`) and fails early if required secrets/keys are missing.
 
 4. **Configure API keys**
    ```bash
@@ -79,6 +80,12 @@ COMFY_API_URL=http://localhost:8188
 COMFYUI_ENABLED=true
 ```
 
+Or start from the production template:
+
+```bash
+cp .env.production.example .env
+```
+
 ### 2. SSL Certificate Setup
 
 Using Let's Encrypt:
@@ -115,6 +122,21 @@ Production Docker config now enforces HTTPS at multiple layers:
   - `CORS_ORIGINS=["https://${FULL_DOMAIN}"]`
 
 These settings ensure production requests are served over HTTPS and backend redirects insecure HTTP requests when needed.
+
+### Production Preflight
+
+Validate production configuration before startup:
+
+```bash
+./scripts/preflight-production.sh .env
+```
+
+Checks include:
+- required production mode flags (`ENVIRONMENT=production`, `FORCE_HTTPS=true`)
+- strong non-placeholder `SECRET_KEY`
+- domain + CORS configuration
+- at least one AI key configured
+- Docker and Docker Compose availability
 
 ### 4. Systemd Service
 
