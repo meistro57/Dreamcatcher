@@ -65,6 +65,8 @@ SSL_EMAIL=admin@yourdomain.com
 # AI API Keys
 ANTHROPIC_API_KEY=your_claude_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+DEFAULT_AI_MODEL=claude-3-haiku
 
 # Database
 DB_PASSWORD=your_secure_password_here
@@ -79,6 +81,8 @@ CORS_ORIGINS=["https://dreamcatcher.yourdomain.com"]
 COMFY_API_URL=http://localhost:8188
 COMFYUI_ENABLED=true
 ```
+
+`DEFAULT_AI_MODEL` can be any model visible in `Settings -> System -> Default AI Model`, including `openrouter/*` models when `OPENROUTER_API_KEY` is configured.
 
 Or start from the production template:
 

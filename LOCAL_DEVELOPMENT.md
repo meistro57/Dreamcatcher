@@ -38,6 +38,8 @@ Edit the `.env` file and add your API keys:
 ```env
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+DEFAULT_AI_MODEL=claude-3-haiku
 ENABLE_SYSTEM_ACTIONS=true
 SYSTEM_ACTION_USERS=user,admin
 IDEA_PROCESSING_TIMEOUT_MINUTES=15
@@ -46,11 +48,19 @@ IDEA_PROCESSING_TIMEOUT_MINUTES=15
 You can get these from:
 - **Anthropic**: https://console.anthropic.com/
 - **OpenAI**: https://platform.openai.com/api-keys
+- **OpenRouter**: https://openrouter.ai/keys
 
 `ENABLE_SYSTEM_ACTIONS` and `SYSTEM_ACTION_USERS` are optional. They enable guarded restart/rebuild controls in `Settings -> System` for listed usernames.
 `IDEA_PROCESSING_TIMEOUT_MINUTES` is optional and controls when stuck ideas are auto-marked as failed.
 
 You can also update API keys in `Settings -> System -> API Keys`. Runtime updates apply immediately; enable `Persist to .env` to keep keys across restarts.
+
+### 4a. Model Selection (Including OpenRouter)
+
+After setting keys, open `Settings -> System -> Default AI Model` to:
+- refresh the runtime model catalog
+- choose a default model (`claude-*`, `gpt-*`, or `openrouter/*`)
+- optionally persist the selection to `.env` as `DEFAULT_AI_MODEL`
 
 ### 5. Access Dreamcatcher
 
