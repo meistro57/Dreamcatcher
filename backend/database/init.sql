@@ -1,11 +1,9 @@
 -- Dreamcatcher Database Initialization Script
 -- This script creates the initial database schema for local development
 
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS dreamcatcher;
-
--- Connect to the dreamcatcher database
-\c dreamcatcher;
+-- NOTE:
+-- `POSTGRES_DB=dreamcatcher` in docker-compose already creates this database.
+-- Keep this script idempotent and PostgreSQL-compatible.
 
 -- Create user if it doesn't exist
 DO $$

@@ -74,14 +74,36 @@ class AgentListener(BaseAgent):
         try:
             audio_data = data.get('audio_data')
             audio_file = data.get('audio_file')
+            user_id = data.get('user_id')
             device_info = data.get('device_info', {})
             location_data = data.get('location_data', {})
 
             if not audio_data and not audio_file:
                 return {'error': 'No audio data provided'}
+            if not user_id:
+                return {'error': 'Missing user_id'}
 
+            # Fallback mode: persist a voice note even when transcription is unavailable.
             if not self.whisper_model:
-                return {'error': 'Voice transcription model unavailable'}
+                fallback_content = data.get('fallback_content', 'Voice note captured (transcription unavailable)')
+                with get_db() as db:
+                    idea = IdeaCRUD.create_idea(
+                        db=db,
+                        content=fallback_content,
+                        user_id=user_id,
+                        source_type='voice',
+                        content_transcribed=None,
+                        device_info={**device_info, 'transcription_available': False},
+                        location_data=location_data
+                    )
+
+                await self._trigger_processing(idea.id, fallback_content)
+                return {
+                    'success': True,
+                    'idea_id': idea.id,
+                    'transcription': '',
+                    'message': 'Voice captured. Transcription is unavailable on this backend.'
+                }
 
             # Transcribe audio
             transcription = await self._transcribe_audio(audio_data or audio_file)
@@ -94,6 +116,7 @@ class AgentListener(BaseAgent):
                 idea = IdeaCRUD.create_idea(
                     db=db,
                     content=transcription,
+                    user_id=user_id,
                     source_type='voice',
                     content_transcribed=transcription,
                     device_info=device_info,
@@ -121,12 +144,15 @@ class AgentListener(BaseAgent):
         """Process text input"""
         try:
             content = data.get('content', '').strip()
+            user_id = data.get('user_id')
             device_info = data.get('device_info', {})
             location_data = data.get('location_data', {})
             urgency_hint = data.get('urgency', 'normal')
             
             if not content:
                 return {'error': 'No text content provided'}
+            if not user_id:
+                return {'error': 'Missing user_id'}
             
             # Determine initial urgency score based on hint and content
             urgency_score = self._calculate_urgency_score(content, urgency_hint)
@@ -136,6 +162,7 @@ class AgentListener(BaseAgent):
                 idea = IdeaCRUD.create_idea(
                     db=db,
                     content=content,
+                    user_id=user_id,
                     source_type='text',
                     content_transcribed=content,
                     device_info=device_info,
@@ -165,17 +192,21 @@ class AgentListener(BaseAgent):
         """Process dream log input"""
         try:
             content = data.get('content', '').strip()
+            user_id = data.get('user_id')
             dream_type = data.get('dream_type', 'regular')  # 'regular', 'lucid', 'nightmare'
             sleep_stage = data.get('sleep_stage', 'unknown')
             
             if not content:
                 return {'error': 'No dream content provided'}
+            if not user_id:
+                return {'error': 'Missing user_id'}
             
             # Dreams get special handling
             with get_db() as db:
                 idea = IdeaCRUD.create_idea(
                     db=db,
                     content=content,
+                    user_id=user_id,
                     source_type='dream',
                     content_transcribed=content,
                     category='metaphysical',
@@ -206,9 +237,12 @@ class AgentListener(BaseAgent):
         try:
             image_path = data.get('image_path')
             description = data.get('description', '').strip()
+            user_id = data.get('user_id')
             
             if not image_path:
                 return {'error': 'No image path provided'}
+            if not user_id:
+                return {'error': 'Missing user_id'}
             
             # For now, we'll just store the image reference
             # Future: OCR, image analysis, etc.
@@ -216,6 +250,7 @@ class AgentListener(BaseAgent):
                 idea = IdeaCRUD.create_idea(
                     db=db,
                     content=description or f"Image uploaded: {os.path.basename(image_path)}",
+                    user_id=user_id,
                     source_type='image',
                     content_transcribed=description,
                     device_info={'image_path': image_path}
@@ -336,6 +371,29 @@ class AgentListener(BaseAgent):
     async def _trigger_processing(self, idea_id: str, content: str):
         """Trigger downstream processing for the captured idea"""
         try:
+            from . import agent_registry
+
+            # Mark as actively processing before queuing downstream work.
+            with get_db() as db:
+                IdeaCRUD.update_idea(
+                    db=db,
+                    idea_id=idea_id,
+                    processing_status='processing'
+                )
+
+            classifier_agent = agent_registry.get_agent("classifier")
+            if not classifier_agent or not classifier_agent.is_active:
+                with get_db() as db:
+                    IdeaCRUD.update_idea(
+                        db=db,
+                        idea_id=idea_id,
+                        processing_status='failed'
+                    )
+                self.logger.error(
+                    f"Classifier agent unavailable; marked idea {idea_id} as failed"
+                )
+                return
+
             # Send message to classifier agent
             await self.send_message(
                 recipient="classifier",
@@ -350,6 +408,12 @@ class AgentListener(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Failed to trigger processing: {e}")
+            with get_db() as db:
+                IdeaCRUD.update_idea(
+                    db=db,
+                    idea_id=idea_id,
+                    processing_status='failed'
+                )
     
     async def _trigger_dream_processing(self, idea_id: str, content: str, dream_type: str):
         """Trigger dream-specific processing"""

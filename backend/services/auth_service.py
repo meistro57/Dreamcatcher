@@ -186,8 +186,10 @@ class AuthService:
                 "email": user.email,
                 "username": user.username,
                 "full_name": user.full_name,
+                "is_active": user.is_active,
                 "roles": [role.name for role in user.roles],
-                "is_verified": user.is_verified
+                "is_verified": user.is_verified,
+                "created_at": user.created_at,
             }
         }
     

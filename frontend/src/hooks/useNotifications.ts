@@ -21,7 +21,9 @@ export const useNotifications = () => {
     if (!lastMessage || !appSettings.notifications) return
 
     try {
-      const message = JSON.parse(lastMessage)
+      const message = typeof lastMessage === 'string'
+        ? JSON.parse(lastMessage)
+        : lastMessage
       
       switch (message.type) {
         case 'idea_created':

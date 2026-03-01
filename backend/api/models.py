@@ -56,6 +56,9 @@ class AgentStatusResponse(BaseModel):
     total_processed: int
     success_rate: float
     version: str
+    queue_depth: int = 0
+    last_error: Optional[str] = None
+    last_error_at: Optional[datetime] = None
 
 class TagResponse(BaseModel):
     id: int

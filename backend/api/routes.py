@@ -4,19 +4,23 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from enum import Enum
+from pydantic import BaseModel
 import json
 import asyncio
 import logging
 from datetime import datetime
 import tempfile
 import os
+from pathlib import Path
+from importlib import import_module
 
 try:  # pragma: no cover - import flexibility for tests and runtime
-    from ..database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
+    from ..database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD
     from ..database.models import User
     from ..agents import agent_registry, AgentListener, AgentClassifier
     from ..agents.base_agent import AgentMessage
     from ..agents.agent_semantic import semantic_agent
+    from ..services.embedding_service import embedding_service
     from ..services import AIService, AudioProcessor
     from .websocket_manager import WebSocketManager
     from .auth_routes import get_current_user
@@ -25,11 +29,12 @@ try:  # pragma: no cover - import flexibility for tests and runtime
         IdeaResponse, ProposalResponse, AgentStatusResponse
     )
 except ImportError:  # pragma: no cover - fallback when run as script
-    from database import get_db, IdeaCRUD, ProposalCRUD, AgentCRUD
+    from database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD
     from database.models import User
     from agents import agent_registry, AgentListener, AgentClassifier
     from agents.base_agent import AgentMessage
     from agents.agent_semantic import semantic_agent
+    from services.embedding_service import embedding_service
     from services import AIService, AudioProcessor
     from api.websocket_manager import WebSocketManager
     from api.auth_routes import get_current_user
@@ -49,6 +54,13 @@ class UrgencyLevel(str, Enum):
     high = "high"
     critical = "critical"
 
+
+class ApiKeysUpdateRequest(BaseModel):
+    anthropic_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    persist_to_env: bool = False
+
 # Initialize router
 router = APIRouter()
 security = HTTPBearer()
@@ -61,18 +73,166 @@ ws_manager = WebSocketManager()
 # Setup logging
 logger = logging.getLogger("api.routes")
 
+SYSTEM_ACTION_TIMEOUT_SECONDS = 900
+
 # Initialize agents
 listener_agent = AgentListener()
 classifier_agent = AgentClassifier()
 
-# Register agents
+def _register_agent_safely(module_path: str, class_name: str, agent_name: str):
+    """Register optional agents without failing API startup."""
+    try:
+        agent_module = import_module(module_path)
+        agent_factory = getattr(agent_module, class_name)
+        agent_registry.register(agent_factory())
+        logger.info(f"Registered agent: {agent_name}")
+    except Exception as e:
+        logger.warning(f"Skipping agent {agent_name}: {e}")
+
+# Register core agents
 agent_registry.register(listener_agent)
 agent_registry.register(classifier_agent)
 agent_registry.register(semantic_agent)
 
+# Register additional runtime agents
+_register_agent_safely("agents.agent_expander", "AgentExpander", "expander")
+_register_agent_safely("agents.agent_proposer", "AgentProposer", "proposer")
+_register_agent_safely("agents.agent_reviewer", "AgentReviewer", "reviewer")
+_register_agent_safely("agents.agent_visualizer", "AgentVisualizer", "visualizer")
+_register_agent_safely("agents.agent_meta", "AgentMeta", "meta")
+
+def _is_system_actions_enabled_for_user(current_user: User) -> bool:
+    enabled = os.getenv("ENABLE_SYSTEM_ACTIONS", "false").lower() == "true"
+    if not enabled:
+        return False
+
+    allowed_users_raw = os.getenv("SYSTEM_ACTION_USERS", "admin")
+    allowed_users = {item.strip() for item in allowed_users_raw.split(",") if item.strip()}
+    username = getattr(current_user, "username", None)
+
+    if "*" in allowed_users:
+        return True
+    if username and username in allowed_users:
+        return True
+
+    return False
+
+def _resolve_compose_file() -> Optional[Path]:
+    candidates = [
+        Path.cwd() / "docker-compose.local.yml",
+        Path.cwd().parent / "docker-compose.local.yml",
+        Path("/home/mark/Dreamcatcher/docker-compose.local.yml"),
+    ]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+def _resolve_env_file() -> Optional[Path]:
+    candidates = [
+        Path.cwd() / ".env",
+        Path.cwd().parent / ".env",
+        Path("/home/mark/Dreamcatcher/.env"),
+    ]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+def _persist_env_values(updates: Dict[str, str]) -> Optional[Path]:
+    env_file = _resolve_env_file()
+    if not env_file:
+        return None
+
+    try:
+        original_text = env_file.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read env file: {exc}")
+
+    lines = original_text.splitlines()
+    keys_remaining = set(updates.keys())
+    updated_lines: List[str] = []
+
+    for line in lines:
+        line_out = line
+        for key in list(keys_remaining):
+            if line.startswith(f"{key}="):
+                line_out = f"{key}={updates[key]}"
+                keys_remaining.remove(key)
+                break
+        updated_lines.append(line_out)
+
+    for key in keys_remaining:
+        updated_lines.append(f"{key}={updates[key]}")
+
+    try:
+        env_file.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to write env file: {exc}")
+
+    return env_file
+
+def _get_system_action_steps() -> Dict[str, List[List[str]]]:
+    compose_file = _resolve_compose_file()
+    if not compose_file:
+        return {}
+
+    compose = ["docker", "compose", "-f", str(compose_file)]
+    return {
+        "restart_backend": [compose + ["restart", "backend"]],
+        "rebuild_backend": [compose + ["build", "backend"], compose + ["up", "-d", "backend"]],
+        "restart_frontend": [compose + ["restart", "frontend"]],
+        "rebuild_frontend": [compose + ["build", "frontend"], compose + ["up", "-d", "frontend"]],
+        "restart_stack": [compose + ["restart"]],
+        "rebuild_stack": [compose + ["build", "backend", "frontend"], compose + ["up", "-d", "backend", "frontend"]],
+    }
+
+async def _run_system_action(action: str) -> Dict[str, Any]:
+    steps = _get_system_action_steps().get(action)
+    if not steps:
+        raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+
+    outputs: List[Dict[str, Any]] = []
+    for step in steps:
+        process = await asyncio.create_subprocess_exec(
+            *step,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=SYSTEM_ACTION_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.communicate()
+            raise HTTPException(status_code=504, detail=f"Action timed out while running: {' '.join(step)}")
+
+        stdout_text = stdout.decode(errors="replace")
+        stderr_text = stderr.decode(errors="replace")
+        outputs.append({
+            "command": " ".join(step),
+            "return_code": process.returncode,
+            "stdout": stdout_text[-8000:],
+            "stderr": stderr_text[-8000:]
+        })
+
+        if process.returncode != 0:
+            return {
+                "success": False,
+                "action": action,
+                "steps": outputs
+            }
+
+    return {
+        "success": True,
+        "action": action,
+        "steps": outputs
+    }
+
 # Health check endpoint
 @router.get("/health")
-async def health_check(db: Session = Depends(get_db)):
+async def health_check(db: Session = Depends(get_db_dependency)):
     """Health check endpoint"""
     # Check database health
     db_healthy = False
@@ -95,6 +255,104 @@ async def health_check(db: Session = Depends(get_db)):
         }
     }
 
+@router.get("/system/actions")
+async def get_system_actions_status(current_user: User = Depends(get_current_user)):
+    """Get available system actions for this runtime."""
+    enabled_for_user = _is_system_actions_enabled_for_user(current_user)
+    actions = sorted(list(_get_system_action_steps().keys())) if enabled_for_user else []
+
+    return {
+        "enabled": enabled_for_user,
+        "actions": actions,
+        "message": (
+            "System actions available"
+            if enabled_for_user
+            else "System actions are disabled. Set ENABLE_SYSTEM_ACTIONS=true and include your username in SYSTEM_ACTION_USERS."
+        )
+    }
+
+@router.post("/system/actions/{action}")
+async def run_system_action(action: str, current_user: User = Depends(get_current_user)):
+    """Run a guarded system action such as restart/rebuild."""
+    if not _is_system_actions_enabled_for_user(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="System actions disabled for this user. Configure ENABLE_SYSTEM_ACTIONS and SYSTEM_ACTION_USERS."
+        )
+
+    result = await _run_system_action(action)
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result)
+    return result
+
+
+@router.get("/settings/api-keys/status")
+async def get_api_keys_status(current_user: User = Depends(get_current_user)):
+    """Get API key configuration status without exposing secrets."""
+    return {
+        "anthropic_configured": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
+        "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY")),
+        "ai_available": ai_service.is_available(),
+        "can_persist_to_env": _is_system_actions_enabled_for_user(current_user)
+    }
+
+
+@router.post("/settings/api-keys")
+async def update_api_keys(
+    payload: ApiKeysUpdateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update API keys for the running backend process."""
+    if payload.persist_to_env and not _is_system_actions_enabled_for_user(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Persisting API keys requires system actions permission."
+        )
+
+    updated = []
+    env_updates: Dict[str, str] = {}
+
+    if payload.anthropic_api_key is not None:
+        value = payload.anthropic_api_key.strip()
+        os.environ["ANTHROPIC_API_KEY"] = value
+        env_updates["ANTHROPIC_API_KEY"] = value
+        updated.append("anthropic")
+
+    if payload.openai_api_key is not None:
+        value = payload.openai_api_key.strip()
+        os.environ["OPENAI_API_KEY"] = value
+        env_updates["OPENAI_API_KEY"] = value
+        updated.append("openai")
+
+    if payload.openrouter_api_key is not None:
+        value = payload.openrouter_api_key.strip()
+        os.environ["OPENROUTER_API_KEY"] = value
+        env_updates["OPENROUTER_API_KEY"] = value
+        updated.append("openrouter")
+
+    if not updated:
+        raise HTTPException(status_code=400, detail="No API keys provided")
+
+    # Reinitialize AI client availability for this running process.
+    ai_service._initialize_clients()
+
+    persisted = False
+    persisted_path = None
+    if payload.persist_to_env:
+        if env_updates:
+            env_path = _persist_env_values(env_updates)
+            persisted = bool(env_path)
+            persisted_path = str(env_path) if env_path else None
+
+    return {
+        "message": "API keys updated for current runtime",
+        "updated": updated,
+        "ai_available": ai_service.is_available(),
+        "persisted_to_env": persisted,
+        "env_path": persisted_path
+    }
+
 # Voice capture endpoint
 @router.post("/capture/voice", response_model=CaptureVoiceResponse)
 async def capture_voice(
@@ -102,7 +360,7 @@ async def capture_voice(
     urgency: UrgencyLevel = Form(UrgencyLevel.normal),
     location: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Capture voice input and process it"""
     tmp_file_path = None
@@ -184,7 +442,7 @@ async def capture_voice(
 async def capture_text(
     request: CaptureTextRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Capture text input and process it"""
     try:
@@ -248,7 +506,7 @@ async def capture_dream(
     dream_type: str = Form("regular"),
     sleep_stage: str = Form("unknown"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Capture dream log entry"""
     try:
@@ -312,7 +570,7 @@ async def get_ideas(
     source_type: Optional[str] = None,
     min_urgency: Optional[float] = None,
     search: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Get ideas with filtering"""
     try:
@@ -348,7 +606,7 @@ async def get_ideas(
 
 # Get specific idea
 @router.get("/ideas/{idea_id}", response_model=IdeaResponse)
-async def get_idea(idea_id: str, db: Session = Depends(get_db)):
+async def get_idea(idea_id: str, db: Session = Depends(get_db_dependency)):
     """Get specific idea by ID"""
     try:
         idea = IdeaCRUD.get_idea(db, idea_id)
@@ -383,7 +641,7 @@ async def update_idea(
     content: Optional[str] = None,
     category: Optional[str] = None,
     urgency_score: Optional[float] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Update an existing idea"""
     try:
@@ -427,7 +685,7 @@ async def update_idea(
 
 # Delete idea endpoint
 @router.delete("/ideas/{idea_id}")
-async def delete_idea(idea_id: str, db: Session = Depends(get_db)):
+async def delete_idea(idea_id: str, db: Session = Depends(get_db_dependency)):
     """Delete an idea"""
     try:
         success = IdeaCRUD.delete_idea(db, idea_id)
@@ -457,7 +715,7 @@ async def delete_idea(idea_id: str, db: Session = Depends(get_db)):
 async def archive_idea(
     idea_id: str,
     reason: str = Form(""),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Archive an idea"""
     try:
@@ -490,7 +748,7 @@ async def archive_idea(
 async def expand_idea(
     idea_id: str,
     expansion_type: str = Form("detailed"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Manually trigger idea expansion"""
     try:
@@ -548,7 +806,7 @@ async def expand_idea(
 
 # Get idea visuals endpoint
 @router.get("/ideas/{idea_id}/visuals")
-async def get_idea_visuals(idea_id: str, db: Session = Depends(get_db)):
+async def get_idea_visuals(idea_id: str, db: Session = Depends(get_db_dependency)):
     """Get visuals for an idea"""
     try:
         from ..database import VisualCRUD
@@ -575,7 +833,7 @@ async def get_idea_visuals(idea_id: str, db: Session = Depends(get_db)):
 
 # Get idea expansions endpoint
 @router.get("/ideas/{idea_id}/expansions")
-async def get_idea_expansions(idea_id: str, db: Session = Depends(get_db)):
+async def get_idea_expansions(idea_id: str, db: Session = Depends(get_db_dependency)):
     """Get expansions for an idea"""
     try:
         from ..database import ExpansionCRUD
@@ -745,13 +1003,91 @@ async def get_embedding_stats(
         logger.error(f"Failed to get embedding stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/logs/search/semantic")
+async def semantic_log_search(
+    query: str,
+    limit: int = 20,
+    threshold: float = 0.4,
+    agent_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Search agent logs by semantic similarity."""
+    try:
+        if not query.strip():
+            raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+        if limit < 1 or limit > 100:
+            raise HTTPException(status_code=400, detail="limit must be between 1 and 100")
+
+        if threshold < 0 or threshold > 1:
+            raise HTTPException(status_code=400, detail="threshold must be between 0 and 1")
+
+        results = await embedding_service.search_similar_logs(
+            query=query,
+            limit=limit,
+            threshold=threshold,
+            agent_id=agent_id,
+            status=status
+        )
+
+        return {
+            "success": True,
+            "query": query,
+            "results": results,
+            "total_results": len(results),
+            "search_type": "semantic_logs"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Semantic log search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/logs/embeddings/batch_update")
+async def batch_update_log_embeddings(
+    batch_size: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    """Update embeddings for logs that do not have one."""
+    try:
+        if batch_size < 1 or batch_size > 1000:
+            raise HTTPException(status_code=400, detail="batch_size must be between 1 and 1000")
+
+        updated_count = await embedding_service.batch_update_log_embeddings(batch_size)
+        return {
+            "success": True,
+            "updated_count": updated_count,
+            "message": f"Updated {updated_count} log embeddings"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to batch update log embeddings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/logs/embeddings/stats")
+async def get_log_embedding_stats(
+    current_user: User = Depends(get_current_user)
+):
+    """Get embedding coverage statistics for agent logs."""
+    try:
+        stats = await embedding_service.get_log_embedding_stats()
+        return {
+            "success": True,
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Failed to get log embedding stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Get proposals endpoint
 @router.get("/proposals", response_model=List[ProposalResponse])
 async def get_proposals(
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Get proposals with filtering"""
     try:
@@ -783,7 +1119,7 @@ async def get_proposals(
 async def approve_proposal(
     proposal_id: str,
     notes: str = Form(""),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Approve a proposal"""
     try:
@@ -813,10 +1149,18 @@ async def approve_proposal(
 
 # Agent status endpoint
 @router.get("/agents/status", response_model=List[AgentStatusResponse])
-async def get_agent_status():
+async def get_agent_status(db: Session = Depends(get_db_dependency)):
     """Get status of all agents"""
     try:
         agents = agent_registry.get_all_agents()
+        failed_logs = AgentLogCRUD.get_error_logs(db, hours=168)
+        last_error_by_agent: Dict[str, Dict[str, Any]] = {}
+        for log in failed_logs:
+            if log.agent_id not in last_error_by_agent:
+                last_error_by_agent[log.agent_id] = {
+                    "error_message": log.error_message,
+                    "started_at": log.started_at
+                }
         
         return [
             AgentStatusResponse(
@@ -825,7 +1169,10 @@ async def get_agent_status():
                 is_active=agent.is_active,
                 total_processed=agent.total_processed,
                 success_rate=agent.success_count / agent.total_processed if agent.total_processed > 0 else 0,
-                version=agent.version
+                version=agent.version,
+                queue_depth=agent.message_queue.qsize() if hasattr(agent, "message_queue") else 0,
+                last_error=last_error_by_agent.get(agent.agent_id, {}).get("error_message"),
+                last_error_at=last_error_by_agent.get(agent.agent_id, {}).get("started_at")
             )
             for agent in agents
         ]
@@ -840,7 +1187,7 @@ async def send_agent_message(
     agent_id: str,
     action: str = Form(...),
     data: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Send a message to a specific agent"""
     try:
@@ -888,11 +1235,10 @@ async def get_agent_logs(
     agent_id: str,
     hours: int = 24,
     status: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Get logs for a specific agent"""
     try:
-        from ..database import AgentLogCRUD
         logs = AgentLogCRUD.get_agent_logs(db, agent_id, status, hours)
         
         return {
@@ -917,12 +1263,55 @@ async def get_agent_logs(
         logger.error(f"Failed to get logs for agent {agent_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/logs")
+async def get_recent_logs(
+    hours: int = 24,
+    status: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """Get recent logs across agents with optional filtering."""
+    try:
+        if limit < 1 or limit > 500:
+            raise HTTPException(status_code=400, detail="limit must be between 1 and 500")
+
+        logs = AgentLogCRUD.get_agent_logs(db, agent_id, status, hours)
+        logs = logs[:limit]
+
+        return {
+            "success": True,
+            "count": len(logs),
+            "logs": [
+                {
+                    "id": log.id,
+                    "agent_id": log.agent_id,
+                    "idea_id": log.idea_id,
+                    "action": log.action,
+                    "status": log.status,
+                    "started_at": log.started_at.isoformat() if log.started_at else None,
+                    "completed_at": log.completed_at.isoformat() if log.completed_at else None,
+                    "processing_time": log.processing_time,
+                    "input_data": log.input_data,
+                    "output_data": log.output_data,
+                    "error_message": log.error_message
+                }
+                for log in logs
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get recent logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Get system metrics endpoint
 @router.get("/metrics")
 async def get_system_metrics(
     metric_name: Optional[str] = None,
     hours: int = 24,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Get system metrics"""
     try:
@@ -949,7 +1338,7 @@ async def get_system_metrics(
 
 # Get error summary endpoint
 @router.get("/errors")
-async def get_error_summary(hours: int = 24, db: Session = Depends(get_db)):
+async def get_error_summary(hours: int = 24, db: Session = Depends(get_db_dependency)):
     """Get error summary"""
     try:
         from ..database import AgentLogCRUD
@@ -986,7 +1375,7 @@ async def get_error_summary(hours: int = 24, db: Session = Depends(get_db)):
 
 # System stats endpoint
 @router.get("/stats")
-async def get_system_stats(db: Session = Depends(get_db)):
+async def get_system_stats(db: Session = Depends(get_db_dependency)):
     """Get system statistics"""
     try:
         # Get idea stats

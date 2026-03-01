@@ -8,6 +8,8 @@ import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import ARRAY
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, AsyncMock
 
@@ -22,13 +24,24 @@ from database import Base, get_db
 from agents import agent_registry
 from services import AIService
 
+# Let SQLite compile Postgres ARRAY columns as JSON text for local lightweight tests.
+@compiles(ARRAY, "sqlite")
+def _compile_array_sqlite(_type, _compiler, **_kw):
+    return "JSON"
+
 # Test database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+SQLALCHEMY_DATABASE_URL = (
+    os.getenv("TEST_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+    or "sqlite:///./test.db"
 )
+
+engine_kwargs = {}
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @pytest.fixture(scope="session")

@@ -4,14 +4,22 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
+
+# Keep setuptools compatible with openai-whisper build tooling.
+RUN printf "setuptools<81\n" > /tmp/pip-constraints.txt
+ENV PIP_CONSTRAINT=/tmp/pip-constraints.txt
+
+# Ensure packaging tooling is present before installing app deps.
+RUN pip install --no-cache-dir --upgrade pip "setuptools<81" wheel
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt

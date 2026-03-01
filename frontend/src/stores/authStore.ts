@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import axios from 'axios'
 import { apiClient } from '../utils/api'
 
 interface User {
@@ -18,6 +19,7 @@ interface AuthState {
   token: string | null
   refreshToken: string | null
   isAuthenticated: boolean
+  hasHydrated: boolean
   isLoading: boolean
   error: string | null
   
@@ -29,6 +31,7 @@ interface AuthState {
   clearError: () => void
   updateUser: (userData: Partial<User>) => void
   checkAuthStatus: () => Promise<boolean>
+  setHasHydrated: (hydrated: boolean) => void
 }
 
 interface RegisterData {
@@ -54,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       refreshToken: null,
       isAuthenticated: false,
+      hasHydrated: false,
       isLoading: false,
       error: null,
 
@@ -144,9 +148,12 @@ export const useAuthStore = create<AuthState>()(
         }
         
         try {
-          const response = await apiClient.post<LoginResponse>('/auth/refresh', {
-            refresh_token: refreshToken
-          })
+          // Use a plain axios request to avoid interceptor recursion on 401 refresh failures.
+          const response = await axios.post<LoginResponse>(
+            `${apiClient.defaults.baseURL}/auth/refresh`,
+            { refresh_token: refreshToken },
+            { headers: { 'Content-Type': 'application/json' } }
+          )
           
           const { access_token, refresh_token: newRefreshToken, user } = response.data
           
@@ -203,6 +210,11 @@ export const useAuthStore = create<AuthState>()(
           return refreshed
         }
       }
+      ,
+
+      setHasHydrated: (hydrated: boolean) => {
+        set({ hasHydrated: hydrated })
+      }
     }),
     {
       name: 'dreamcatcher-auth',
@@ -211,7 +223,17 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        // Mark store hydration complete and sync token aliases used by API interceptors.
+        if (state?.token) {
+          localStorage.setItem('auth_token', state.token)
+        }
+        if (state?.refreshToken) {
+          localStorage.setItem('refresh_token', state.refreshToken)
+        }
+        state?.setHasHydrated(true)
+      }
     }
   )
 )
@@ -221,21 +243,36 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+    const requestUrl = (originalRequest?.url || '') as string
+    const isAuthEndpoint = requestUrl.includes('/auth/login')
+      || requestUrl.includes('/auth/register')
+      || requestUrl.includes('/auth/refresh')
+      || requestUrl.includes('/auth/logout')
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401
+      && originalRequest
+      && !originalRequest._retry
+      && !isAuthEndpoint
+    ) {
       originalRequest._retry = true
       
       const authStore = useAuthStore.getState()
       const refreshed = await authStore.refreshAccessToken()
       
       if (refreshed) {
-        // Update the authorization header and retry the request
-        originalRequest.headers.Authorization = `Bearer ${authStore.token}`
+        // Update the authorization header with the freshest token and retry.
+        const newToken = localStorage.getItem('auth_token')
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
+        }
         return apiClient(originalRequest)
       } else {
         // Refresh failed, redirect to login
         authStore.logout()
-        window.location.href = '/login'
+        if (!window.location.pathname.startsWith('/auth')) {
+          window.location.href = '/auth?mode=login'
+        }
       }
     }
     

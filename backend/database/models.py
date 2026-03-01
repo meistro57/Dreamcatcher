@@ -15,7 +15,7 @@ user_roles = Table(
     Column('user_id', String, ForeignKey('users.id'), primary_key=True),
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
     Column('granted_at', DateTime, default=func.now()),
-    Column('granted_by', String, ForeignKey('users.id'))
+    Column('granted_by', String)
 )
 
 class User(Base):
@@ -57,8 +57,7 @@ class User(Base):
     preferences = Column(JSON, default=dict)
     
     # Relationships
-    roles = relationship("Role", secondary=user_roles, back_populates="users",
-                        foreign_keys=[user_roles.c.user_id])
+    roles = relationship("Role", secondary=user_roles, back_populates="users")
     ideas = relationship("Idea", back_populates="user")
     user_sessions = relationship("UserSession", back_populates="user")
     
@@ -80,8 +79,7 @@ class Role(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
-    users = relationship("User", secondary=user_roles, back_populates="roles",
-                        foreign_keys=[user_roles.c.user_id])
+    users = relationship("User", secondary=user_roles, back_populates="roles")
     
     def __repr__(self):
         return f"<Role(id={self.id}, name={self.name})>"
@@ -313,6 +311,11 @@ class AgentLog(Base):
     input_data = Column(JSON)
     output_data = Column(JSON)
     error_message = Column(Text)
+    
+    # Semantic search
+    content_embedding = Column(ARRAY(Float))  # Vector embedding for semantic log search
+    embedding_model = Column(String)  # Model used to generate embedding
+    embedding_updated_at = Column(DateTime)  # When embedding was last updated
     
     # Timing
     started_at = Column(DateTime, nullable=False)

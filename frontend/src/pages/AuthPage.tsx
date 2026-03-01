@@ -13,7 +13,7 @@ const AuthPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('')
   
   const navigate = useNavigate()
-  const { isAuthenticated, checkAuthStatus } = useAuthStore()
+  const { isAuthenticated, hasHydrated, checkAuthStatus } = useAuthStore()
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -22,9 +22,19 @@ const AuthPage: React.FC = () => {
   }, [isAuthenticated, navigate])
 
   useEffect(() => {
+    if (!hasHydrated) return
+
     // Check if user is already authenticated
     checkAuthStatus()
-  }, [checkAuthStatus])
+  }, [hasHydrated, checkAuthStatus])
+
+  useEffect(() => {
+    if (searchParams.get('passwordChanged') === '1') {
+      setSuccessMessage('Password changed successfully. Please sign in with your new password.')
+      setShowSuccess(true)
+      setMode('login')
+    }
+  }, [searchParams])
 
   const handleLoginSuccess = () => {
     navigate('/')
@@ -47,10 +57,10 @@ const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-600/20 dark:from-blue-600/10 dark:to-purple-800/10"></div>
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-blue-400/20 to-purple-600/20 dark:from-blue-600/10 dark:to-purple-800/10"></div>
       
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md pointer-events-auto">
         {showSuccess && (
           <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
             <div className="flex">

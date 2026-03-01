@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Mic, MicOff, Zap, Loader2 } from 'lucide-react'
 import { useIdeaStore } from '../stores/ideaStore'
 import { useAppStore } from '../stores/appStore'
+import { useNotificationStore } from '../stores/notificationStore'
 
 const VoiceCaptureButton = () => {
   const [isRecording, setIsRecording] = useState(false)
@@ -18,6 +19,8 @@ const VoiceCaptureButton = () => {
   
   const { createIdea } = useIdeaStore()
   const { settings } = useAppStore()
+  const { success, error: notifyError } = useNotificationStore()
+  const voiceCaptureEnabled = settings.voiceCaptureEnabled !== false
   
   useEffect(() => {
     return () => {
@@ -31,6 +34,15 @@ const VoiceCaptureButton = () => {
   }, [])
   
   const startRecording = async () => {
+    if (!voiceCaptureEnabled) {
+      notifyError(
+        'Voice Input Disabled',
+        'Enable voice input from Settings to record.',
+        { source: 'Voice Capture' }
+      )
+      return
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -56,10 +68,17 @@ const VoiceCaptureButton = () => {
       // Start audio level monitoring
       monitorAudioLevel()
       
-      // Set up MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      })
+      // Set up MediaRecorder with safe MIME fallback across browsers.
+      const preferredTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus'
+      ]
+      const selectedType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type))
+      const mediaRecorder = selectedType
+        ? new MediaRecorder(stream, { mimeType: selectedType })
+        : new MediaRecorder(stream)
       
       const chunks: Blob[] = []
       
@@ -85,9 +104,13 @@ const VoiceCaptureButton = () => {
         setRecordingTime(prev => prev + 1)
       }, 1000)
       
-    } catch (error) {
-      console.error('Failed to start recording:', error)
-      alert('Failed to access microphone. Please check permissions.')
+    } catch (err) {
+      console.error('Failed to start recording:', err)
+      notifyError(
+        'Microphone Error',
+        'Failed to access microphone. Please check browser permissions.',
+        { source: 'Voice Capture' }
+      )
     }
   }
   
@@ -117,6 +140,12 @@ const VoiceCaptureButton = () => {
       setAudioLevel(0)
     }
   }
+
+  useEffect(() => {
+    if (!voiceCaptureEnabled && isRecording) {
+      stopRecording()
+    }
+  }, [voiceCaptureEnabled, isRecording])
   
   const monitorAudioLevel = () => {
     if (!analyserRef.current) return
@@ -159,10 +188,26 @@ const VoiceCaptureButton = () => {
       if (ideaId) {
         // Success feedback
         navigator.vibrate?.(100)
+        success(
+          'Voice Captured',
+          'Your voice note has been captured and queued for processing.',
+          { source: 'Voice Capture' }
+        )
+      } else {
+        notifyError(
+          'Voice Capture Failed',
+          'Could not process your voice recording.',
+          { source: 'Voice Capture' }
+        )
       }
       
-    } catch (error) {
-      console.error('Failed to process audio:', error)
+    } catch (err) {
+      console.error('Failed to process audio:', err)
+      notifyError(
+        'Voice Capture Failed',
+        'Unexpected error while processing recording.',
+        { source: 'Voice Capture' }
+      )
     } finally {
       setIsProcessing(false)
       setRecordingTime(0)
@@ -177,6 +222,7 @@ const VoiceCaptureButton = () => {
   
   const buttonSize = isRecording ? 'w-20 h-20' : 'w-16 h-16'
   const buttonScale = isRecording ? 'scale-110' : 'scale-100'
+  const voiceDisabled = !voiceCaptureEnabled
   
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -201,12 +247,14 @@ const VoiceCaptureButton = () => {
       
       {/* Main Button */}
       <button
-        onClick={isRecording ? stopRecording : startRecording}
-        disabled={isProcessing}
+        onClick={voiceDisabled ? undefined : (isRecording ? stopRecording : startRecording)}
+        disabled={isProcessing || voiceDisabled}
         className={`
           ${buttonSize} ${buttonScale}
-          bg-gradient-to-r from-primary-600 to-primary-700
-          hover:from-primary-700 hover:to-primary-800
+          ${voiceDisabled
+            ? 'bg-dark-700 border border-dark-500'
+            : 'bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800'
+          }
           disabled:from-gray-600 disabled:to-gray-700
           text-white rounded-full
           shadow-2xl shadow-primary-600/30
@@ -219,6 +267,8 @@ const VoiceCaptureButton = () => {
       >
         {isProcessing ? (
           <Loader2 className="w-8 h-8 animate-spin" />
+        ) : voiceDisabled ? (
+          <MicOff className="w-8 h-8 text-dark-300" />
         ) : isRecording ? (
           <MicOff className="w-8 h-8" />
         ) : (
@@ -228,11 +278,12 @@ const VoiceCaptureButton = () => {
       
       {/* Emergency Mode Button */}
       <button
+        disabled={voiceDisabled}
         onClick={() => {
           // Emergency capture - skip processing, just record
           alert('Emergency capture mode activated!')
         }}
-        className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full shadow-lg flex items-center justify-center"
+        className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white rounded-full shadow-lg flex items-center justify-center"
         title="Emergency Capture"
       >
         <Zap className="w-4 h-4" />

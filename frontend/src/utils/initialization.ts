@@ -3,7 +3,11 @@ import { api } from './api'
 export const initializeApp = async () => {
   try {
     // Check API health
-    await api.health()
+    try {
+      await api.health()
+    } catch (error) {
+      console.warn('API health check failed, continuing in degraded mode:', error)
+    }
     
     // Initialize IndexedDB for offline storage
     await initializeOfflineStorage()
@@ -17,7 +21,6 @@ export const initializeApp = async () => {
     console.log('App initialized successfully')
   } catch (error) {
     console.error('App initialization failed:', error)
-    throw error
   }
 }
 

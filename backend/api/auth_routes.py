@@ -9,7 +9,7 @@ from typing import Dict, Any
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
-from database.database import get_db
+from database.database import get_db_dependency
 from services.auth_service import (
     AuthService, 
     AuthenticationError, 
@@ -51,6 +51,10 @@ class ChangePasswordRequest(BaseModel):
     confirm_password: str
 
 
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -73,7 +77,7 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
-def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
+def get_auth_service(db: Session = Depends(get_db_dependency)) -> AuthService:
     """Dependency to get AuthService instance"""
     import os
     secret_key = os.getenv("SECRET_KEY")
@@ -357,6 +361,8 @@ async def change_password(
                 detail="Current password is incorrect"
             )
             
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -393,7 +399,7 @@ async def get_users(
     skip: int = 0,
     limit: int = 20,
     current_user: User = Depends(require_permission("user.read")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Get list of users (admin only)"""
     try:
@@ -426,7 +432,7 @@ async def search_users(
     q: str,
     limit: int = 10,
     current_user: User = Depends(require_permission("user.read")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Search users by name, email, or username"""
     try:
@@ -455,7 +461,7 @@ async def deactivate_user(
     user_id: str,
     current_user: User = Depends(require_permission("user.update")),
     auth_service: AuthService = Depends(get_auth_service),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Deactivate user account (admin only)"""
     try:
@@ -489,7 +495,7 @@ async def deactivate_user(
 async def activate_user(
     user_id: str,
     current_user: User = Depends(require_permission("user.update")),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_dependency)
 ):
     """Activate user account (admin only)"""
     try:
@@ -512,6 +518,67 @@ async def activate_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="User activation failed"
+        )
+
+
+@router.post("/users/{user_id}/unlock")
+async def unlock_user(
+    user_id: str,
+    current_user: User = Depends(require_permission("user.update")),
+    db: Session = Depends(get_db_dependency)
+):
+    """Unlock user account and clear lock counters (admin only)."""
+    try:
+        user_crud = UserCRUD(db)
+        user = user_crud.get_by_id(user_id)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.is_active = True
+        user.updated_at = datetime.utcnow()
+        db.commit()
+
+        return {"message": "User unlocked successfully"}
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User unlock failed"
+        )
+
+
+@router.post("/users/{user_id}/reset-password")
+async def admin_reset_user_password(
+    user_id: str,
+    payload: AdminResetPasswordRequest,
+    current_user: User = Depends(require_permission("user.update")),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Reset a user's password and revoke sessions (admin only)."""
+    try:
+        success = auth_service.reset_password(user_id, payload.new_password)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        return {"message": "User password reset successfully"}
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User password reset failed"
         )
 
 

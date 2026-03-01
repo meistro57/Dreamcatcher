@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 // Store imports
 import { useAppStore } from './stores/appStore'
@@ -27,12 +27,22 @@ import { useNotifications } from './hooks/useNotifications'
 function App() {
   const { isInitialized, initializeStore } = useAppStore()
   const { connect: connectWebSocket } = useWebSocketStore()
-  const { checkAuthStatus } = useAuthStore()
+  const { hasHydrated, checkAuthStatus } = useAuthStore()
+  const hasInitializedRef = useRef(false)
   
   // Initialize notifications
   useNotifications()
 
   useEffect(() => {
+    if (!hasHydrated) {
+      return
+    }
+
+    if (hasInitializedRef.current) {
+      return
+    }
+    hasInitializedRef.current = true
+
     // Initialize the app
     const init = async () => {
       try {
@@ -50,7 +60,7 @@ function App() {
     }
 
     init()
-  }, [initializeStore, connectWebSocket, checkAuthStatus])
+  }, [hasHydrated, initializeStore, connectWebSocket, checkAuthStatus])
 
   if (!isInitialized) {
     return (

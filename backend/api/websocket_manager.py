@@ -227,7 +227,7 @@ class WebSocketManager:
     async def cleanup_stale_connections(self, timeout_minutes: int = 30):
         """Clean up connections that haven't pinged recently"""
         if not self.active_connections:
-            return
+            return 0
         
         current_time = datetime.utcnow()
         stale_connections = []

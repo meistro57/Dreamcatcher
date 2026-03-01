@@ -16,9 +16,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const [isChecking, setIsChecking] = useState(true)
   const location = useLocation()
-  const { isAuthenticated, user, checkAuthStatus } = useAuthStore()
+  const { isAuthenticated, user, hasHydrated, checkAuthStatus } = useAuthStore()
 
   useEffect(() => {
+    if (!hasHydrated) return
+
     const checkAuth = async () => {
       if (!isAuthenticated) {
         await checkAuthStatus()
@@ -27,10 +29,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     checkAuth()
-  }, [isAuthenticated, checkAuthStatus])
+  }, [hasHydrated, isAuthenticated, checkAuthStatus])
 
   // Show loading spinner while checking authentication
-  if (isChecking) {
+  if (!hasHydrated || isChecking) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">

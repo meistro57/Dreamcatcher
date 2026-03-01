@@ -10,7 +10,7 @@ import numpy as np
 
 from services.embedding_service import EmbeddingService
 from agents.agent_semantic import SemanticAgent
-from database.models import Idea, User
+from database.models import Idea, User, AgentLog
 from tasks.embedding_tasks import EmbeddingTaskManager
 
 
@@ -94,6 +94,73 @@ class TestEmbeddingService:
             assert mock_idea.embedding_model == "all-MiniLM-L6-v2"
             assert mock_idea.embedding_updated_at is not None
             mock_db.commit.assert_called_once()
+
+    def test_build_log_embedding_text(self, embedding_service):
+        """Test deterministic payload construction for log embeddings."""
+        log = AgentLog(
+            id="log-1",
+            agent_id="semantic",
+            idea_id="idea-1",
+            action="generate_embedding",
+            status="completed",
+            input_data={"query": "vector db"},
+            output_data={"hits": 3},
+            error_message=None,
+            started_at=datetime.utcnow()
+        )
+
+        payload = embedding_service.build_log_embedding_text(log)
+
+        assert "agent:semantic" in payload
+        assert "action:generate_embedding" in payload
+        assert "status:completed" in payload
+        assert "input:" in payload
+        assert "output:" in payload
+
+    @pytest.mark.asyncio
+    async def test_search_similar_logs(self, embedding_service):
+        """Test semantic log search scoring and filtering."""
+        with patch.object(embedding_service, "generate_embedding", return_value=[1.0, 0.0, 0.0]):
+            with patch("backend.services.embedding_service.SessionLocal") as mock_session:
+                mock_db = MagicMock()
+                mock_session.return_value = mock_db
+
+                matching = AgentLog(
+                    id="log-match",
+                    agent_id="semantic",
+                    action="semantic_search",
+                    status="completed",
+                    input_data={"query": "fitness"},
+                    output_data={"results": 4},
+                    error_message=None,
+                    started_at=datetime.utcnow(),
+                    content_embedding=[1.0, 0.0, 0.0]
+                )
+                low_score = AgentLog(
+                    id="log-low",
+                    agent_id="listener",
+                    action="capture",
+                    status="completed",
+                    input_data={},
+                    output_data={},
+                    error_message=None,
+                    started_at=datetime.utcnow(),
+                    content_embedding=[0.0, 1.0, 0.0]
+                )
+
+                mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [
+                    matching,
+                    low_score
+                ]
+
+                results = await embedding_service.search_similar_logs(
+                    query="find similar logs",
+                    limit=10,
+                    threshold=0.7
+                )
+
+                assert len(results) == 1
+                assert results[0]["id"] == "log-match"
 
 
 class TestSemanticAgent:
@@ -245,6 +312,27 @@ class TestEmbeddingTaskManager:
             assert len(pending_ideas) == 1
             assert pending_ideas[0]['id'] == "test-idea-123"
             assert pending_ideas[0]['content'] == "Test content"
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_resolve_stuck_processing_ideas_marks_failed(self, task_manager):
+        """Ideas stuck in pending/processing beyond timeout should be failed."""
+        stale_idea = MagicMock()
+        stale_idea.processing_status = "processing"
+        stale_idea.updated_at = datetime.utcnow()
+        stale_idea.is_archived = False
+
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter.return_value.all.return_value = [stale_idea]
+
+        with patch("tasks.embedding_tasks.SessionLocal", return_value=mock_db):
+            task_manager.processing_timeout_minutes = 1
+            await task_manager.resolve_stuck_processing_ideas()
+
+        assert stale_idea.processing_status == "failed"
+        assert stale_idea.updated_at is not None
+        mock_db.commit.assert_called_once()
+        mock_db.close.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_process_batch(self, task_manager):

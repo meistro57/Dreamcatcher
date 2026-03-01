@@ -197,6 +197,12 @@ const HomePage = () => {
         setTextInput('')
         // Refresh stats after creating idea
         fetchStats()
+      } else {
+        error(
+          'Failed to Capture Idea',
+          'Capture request failed. Please check your session and try again.',
+          { source: 'Text Input' }
+        )
       }
     } catch (err) {
       console.error('Failed to create idea:', err)

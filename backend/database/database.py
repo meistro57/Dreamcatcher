@@ -39,6 +39,12 @@ def get_db() -> Generator:
     finally:
         db.close()
 
+
+def get_db_dependency() -> Generator:
+    """FastAPI dependency wrapper that yields a DB session."""
+    with get_db() as db:
+        yield db
+
 class DatabaseManager:
     """Database operations manager"""
     

@@ -7,10 +7,18 @@ set -e
 
 echo "🧠 Starting Dreamcatcher Local Development Environment..."
 
-# Check if .env exists, if not copy from .env.local
+# Check if .env exists, if not copy from available template
 if [ ! -f .env ]; then
-    echo "📋 Creating .env file from .env.local template..."
-    cp .env.local .env
+    if [ -f .env.local ]; then
+        echo "📋 Creating .env file from .env.local template..."
+        cp .env.local .env
+    elif [ -f .env.example ]; then
+        echo "📋 Creating .env file from .env.example template..."
+        cp .env.example .env
+    else
+        echo "❌ No env template found (.env.local or .env.example)."
+        exit 1
+    fi
     echo "⚠️  Please edit .env file and add your API keys before continuing!"
     echo "   Required: ANTHROPIC_API_KEY and OPENAI_API_KEY"
     echo ""

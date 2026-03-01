@@ -459,11 +459,45 @@ Get status of all agents.
       "is_active": true,
       "total_processed": 1250,
       "success_rate": 0.98,
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "queue_depth": 0,
+      "last_error": null,
+      "last_error_at": null
     }
   ]
 }
 ```
+
+### Settings
+
+#### GET `/settings/api-keys/status`
+Get runtime API key configuration status (secrets are never returned).
+
+**Response:**
+```json
+{
+  "anthropic_configured": true,
+  "openai_configured": false,
+  "openrouter_configured": true,
+  "ai_available": true,
+  "can_persist_to_env": true
+}
+```
+
+#### POST `/settings/api-keys`
+Update runtime API keys.
+
+**Request:**
+```json
+{
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-...",
+  "openrouter_api_key": "sk-or-...",
+  "persist_to_env": true
+}
+```
+
+`persist_to_env` requires system-actions permission and writes keys to the local `.env`.
 
 #### POST `/agents/{agent_id}/message`
 Send message to a specific agent.
@@ -505,6 +539,54 @@ Get logs for a specific agent.
   }
 }
 ```
+
+#### GET `/logs`
+Get recent logs across all agents.
+
+**Query Parameters:**
+- `hours`: Time window in hours (default: `24`)
+- `status`: Optional status filter (`started`, `completed`, `failed`)
+- `agent_id`: Optional agent filter
+- `limit`: Max rows (1-500, default: `100`)
+
+#### GET `/logs/search/semantic`
+Search logs by semantic similarity.
+
+**Query Parameters:**
+- `query`: Search query text (required)
+- `threshold`: Similarity threshold (0-1, default: `0.4`)
+- `limit`: Max results (1-100, default: `20`)
+- `agent_id`: Optional agent filter
+- `status`: Optional status filter
+
+#### POST `/logs/embeddings/batch_update`
+Backfill or refresh embeddings for logs missing vectors.
+
+**Query Parameters:**
+- `batch_size`: Rows per run (1-1000, default: `100`)
+
+#### GET `/logs/embeddings/stats`
+Get log embedding coverage statistics.
+
+Returns total log count, embedded count, percentage, model stats, and embedding dimension.
+
+#### GET `/system/actions`
+Get runtime availability for guarded system actions (restart/rebuild controls used by Settings UI).
+
+#### POST `/system/actions/{action}`
+Run a guarded system action.
+
+Supported actions:
+- `restart_backend`
+- `rebuild_backend`
+- `restart_frontend`
+- `rebuild_frontend`
+- `restart_stack`
+- `rebuild_stack`
+
+System actions are disabled by default and require:
+- `ENABLE_SYSTEM_ACTIONS=true`
+- `SYSTEM_ACTION_USERS` containing the logged-in username
 
 ### System Monitoring
 

@@ -11,9 +11,12 @@ import {
   Zap,
   User,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Mic,
+  MicOff
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useAppStore } from '../stores/appStore'
 import NotificationButton from './notifications/NotificationButton'
 
 const Navbar = () => {
@@ -21,6 +24,8 @@ const Navbar = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const location = useLocation()
   const { user, logout } = useAuthStore()
+  const { settings, updateSettings } = useAppStore()
+  const voiceCaptureEnabled = settings.voiceCaptureEnabled !== false
   
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
@@ -73,6 +78,21 @@ const Navbar = () => {
             
             {/* Notification Button */}
             <NotificationButton />
+
+            <button
+              onClick={() => updateSettings({ voiceCaptureEnabled: !voiceCaptureEnabled })}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                voiceCaptureEnabled
+                  ? 'text-dark-200 hover:text-white hover:bg-dark-700'
+                  : 'text-yellow-300 bg-yellow-900/20 border border-yellow-700/40 hover:bg-yellow-900/30'
+              }`}
+              title={voiceCaptureEnabled ? 'Mute voice input' : 'Enable voice input'}
+            >
+              {voiceCaptureEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              <span className="text-sm font-medium">
+                {voiceCaptureEnabled ? 'Voice On' : 'Voice Off'}
+              </span>
+            </button>
             
             {/* User Menu */}
             {user && (
@@ -153,6 +173,15 @@ const Navbar = () => {
                 </Link>
               )
             })}
+            <button
+              onClick={() => updateSettings({ voiceCaptureEnabled: !voiceCaptureEnabled })}
+              className="flex items-center space-x-3 px-3 py-3 rounded-lg text-dark-300 hover:text-white hover:bg-dark-700 w-full"
+            >
+              {voiceCaptureEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-yellow-300" />}
+              <span className="font-medium">
+                {voiceCaptureEnabled ? 'Voice On' : 'Voice Off'}
+              </span>
+            </button>
           </div>
         </div>
       )}

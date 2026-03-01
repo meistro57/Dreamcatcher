@@ -8,6 +8,7 @@ interface AppState {
   lastSync: string | null
   settings: {
     autoCapture: boolean
+    voiceCaptureEnabled: boolean
     voiceWakeWord: string
     defaultUrgency: string
     notifications: boolean
@@ -32,6 +33,7 @@ export const useAppStore = create<AppState>()(
       lastSync: null,
       settings: {
         autoCapture: false,
+        voiceCaptureEnabled: true,
         voiceWakeWord: 'hey dreamcatcher',
         defaultUrgency: 'normal',
         notifications: true,

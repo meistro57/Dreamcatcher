@@ -38,11 +38,19 @@ Edit the `.env` file and add your API keys:
 ```env
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
+ENABLE_SYSTEM_ACTIONS=true
+SYSTEM_ACTION_USERS=user,admin
+IDEA_PROCESSING_TIMEOUT_MINUTES=15
 ```
 
 You can get these from:
 - **Anthropic**: https://console.anthropic.com/
 - **OpenAI**: https://platform.openai.com/api-keys
+
+`ENABLE_SYSTEM_ACTIONS` and `SYSTEM_ACTION_USERS` are optional. They enable guarded restart/rebuild controls in `Settings -> System` for listed usernames.
+`IDEA_PROCESSING_TIMEOUT_MINUTES` is optional and controls when stuck ideas are auto-marked as failed.
+
+You can also update API keys in `Settings -> System -> API Keys`. Runtime updates apply immediately; enable `Persist to .env` to keep keys across restarts.
 
 ### 5. Access Dreamcatcher
 
@@ -50,6 +58,20 @@ Once started, you can access:
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
+
+### Local Login Credentials
+
+Use the local development account:
+
+- **Username**: `user`
+- **Password**: `TempPass123!`
+
+Override local seeded credentials with env vars if needed:
+
+- `DEFAULT_DEV_USER_EMAIL`
+- `DEFAULT_DEV_USER_USERNAME`
+- `DEFAULT_DEV_USER_PASSWORD`
+- `DEFAULT_DEV_USER_FULL_NAME`
 
 ## Manual Setup (Alternative)
 
@@ -164,6 +186,12 @@ docker compose -f docker-compose.local.yml logs backend
 # Check health endpoint
 curl http://localhost:8000/api/health
 ```
+
+### System Log Viewer and Semantic Log Search
+- Open `Settings -> System` in the frontend.
+- Use **Log Viewer** for recent logs with status/time filters.
+- Use **Semantic Log Search** to query logs by meaning.
+- Use **Backfill Embeddings** once after enabling the feature to index existing logs.
 
 ### Virtual Environment Issues
 ```bash

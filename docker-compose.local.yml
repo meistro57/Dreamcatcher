@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -45,6 +43,9 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=development
       - CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
+      - ENABLE_SYSTEM_ACTIONS=${ENABLE_SYSTEM_ACTIONS:-false}
+      - SYSTEM_ACTION_USERS=${SYSTEM_ACTION_USERS:-user,admin}
+      - IDEA_PROCESSING_TIMEOUT_MINUTES=${IDEA_PROCESSING_TIMEOUT_MINUTES:-15}
     ports:
       - "8000:8000"
     depends_on:

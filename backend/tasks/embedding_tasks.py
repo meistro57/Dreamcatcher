@@ -5,6 +5,7 @@ Handles automatic embedding generation for new ideas
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
@@ -31,6 +32,7 @@ class EmbeddingTaskManager:
         self.task_interval = 300  # 5 minutes
         self.batch_size = 10
         self.max_retries = 3
+        self.processing_timeout_minutes = int(os.getenv("IDEA_PROCESSING_TIMEOUT_MINUTES", "15"))
     
     async def start(self):
         """Start the embedding task manager"""
@@ -44,6 +46,7 @@ class EmbeddingTaskManager:
         try:
             while self.is_running:
                 await self.process_pending_embeddings()
+                await self.resolve_stuck_processing_ideas()
                 await asyncio.sleep(self.task_interval)
         except Exception as e:
             logger.error(f"Embedding task manager error: {e}")
@@ -57,27 +60,62 @@ class EmbeddingTaskManager:
         self.is_running = False
     
     async def process_pending_embeddings(self):
-        """Process ideas that need embeddings"""
+        """Process ideas and logs that need embeddings"""
         try:
             # Get ideas without embeddings
             pending_ideas = await self.get_pending_ideas()
             
-            if not pending_ideas:
-                logger.debug("No pending ideas for embedding generation")
-                return
-            
-            logger.info(f"Processing {len(pending_ideas)} ideas for embedding generation")
-            
-            # Process ideas in batches
-            for i in range(0, len(pending_ideas), self.batch_size):
-                batch = pending_ideas[i:i + self.batch_size]
-                await self.process_batch(batch)
+            if pending_ideas:
+                logger.info(f"Processing {len(pending_ideas)} ideas for embedding generation")
                 
-                # Small delay between batches
-                await asyncio.sleep(1)
-            
+                # Process ideas in batches
+                for i in range(0, len(pending_ideas), self.batch_size):
+                    batch = pending_ideas[i:i + self.batch_size]
+                    await self.process_batch(batch)
+                    
+                    # Small delay between batches
+                    await asyncio.sleep(1)
+            else:
+                logger.debug("No pending ideas for embedding generation")
+
+            updated_logs = await embedding_service.batch_update_log_embeddings(self.batch_size)
+            if updated_logs:
+                logger.info(f"Generated embeddings for {updated_logs} agent logs")
+                
         except Exception as e:
             logger.error(f"Error processing pending embeddings: {e}")
+
+    async def resolve_stuck_processing_ideas(self):
+        """Fail ideas that have been stuck in pending/processing too long."""
+        try:
+            cutoff = datetime.utcnow() - timedelta(minutes=self.processing_timeout_minutes)
+            db = SessionLocal()
+            try:
+                stale_ideas = db.query(Idea).filter(
+                    and_(
+                        Idea.processing_status.in_(["pending", "processing"]),
+                        Idea.updated_at < cutoff,
+                        Idea.is_archived == False
+                    )
+                ).all()
+
+                if not stale_ideas:
+                    return
+
+                for idea in stale_ideas:
+                    idea.processing_status = "failed"
+                    idea.updated_at = datetime.utcnow()
+
+                db.commit()
+                logger.warning(
+                    "Marked %s stuck ideas as failed (timeout=%s minutes)",
+                    len(stale_ideas),
+                    self.processing_timeout_minutes
+                )
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Error resolving stuck ideas: {e}")
     
     async def get_pending_ideas(self) -> List[Dict[str, Any]]:
         """Get ideas that need embeddings"""
@@ -204,6 +242,10 @@ class EmbeddingTaskManager:
                 ).count()
                 
                 coverage = (ideas_with_embeddings / total_ideas * 100) if total_ideas > 0 else 0
+                logs_total = db.query(AgentLog).count()
+                logs_with_embeddings = db.query(AgentLog).filter(
+                    AgentLog.content_embedding.isnot(None)
+                ).count()
                 
                 return {
                     'status': 'healthy' if coverage > 80 else 'degraded' if coverage > 50 else 'unhealthy',
@@ -211,6 +253,9 @@ class EmbeddingTaskManager:
                     'ideas_with_embeddings': ideas_with_embeddings,
                     'pending_ideas': pending_ideas,
                     'coverage_percentage': coverage,
+                    'total_logs': logs_total,
+                    'logs_with_embeddings': logs_with_embeddings,
+                    'log_coverage_percentage': (logs_with_embeddings / logs_total * 100) if logs_total > 0 else 0,
                     'recent_updates_24h': recent_updates,
                     'task_manager_running': self.is_running,
                     'last_check': datetime.utcnow().isoformat()

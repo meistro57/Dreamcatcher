@@ -90,6 +90,18 @@ class AgentClassifier(BaseAgent):
                 
         except Exception as e:
             self.logger.error(f"Error classifying idea {idea_id}: {e}")
+            if idea_id:
+                try:
+                    with get_db() as db:
+                        IdeaCRUD.update_idea(
+                            db=db,
+                            idea_id=idea_id,
+                            processing_status='failed'
+                        )
+                except Exception as update_error:
+                    self.logger.error(
+                        f"Failed to mark idea {idea_id} as failed: {update_error}"
+                    )
             return {'error': f'Classification failed: {str(e)}'}
     
     async def _classify_idea(self, content: str) -> Dict[str, Any]:
