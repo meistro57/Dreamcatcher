@@ -116,6 +116,9 @@ COMFY_API_URL=${COMFY_API_URL:-http://localhost:8188}
 
 # Security
 SECRET_KEY=$(openssl rand -base64 32)
+ENVIRONMENT=production
+FORCE_HTTPS=true
+CORS_ORIGINS=["https://${FULL_DOMAIN}"]
 
 # Voice Processing
 WHISPER_MODEL=base
@@ -199,15 +202,11 @@ http {
     limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone \$binary_remote_addr zone=upload:10m rate=2r/s;
 
-    # HTTP server (Redirect logic removed to avoid port confusion)
+    # HTTP server (always redirect to HTTPS in production)
     server {
         listen 80;
         server_name ${FULL_DOMAIN};
-        # Simple health check for HTTP
-        location / {
-            return 200 'Please use HTTPS on port ${HTTPS_PORT}';
-            add_header Content-Type text/plain;
-        }
+        return 301 https://\$host\$request_uri;
     }
 
     # Main HTTPS server

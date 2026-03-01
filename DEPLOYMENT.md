@@ -70,6 +70,9 @@ DB_PASSWORD=your_secure_password_here
 
 # Security
 SECRET_KEY=your_secret_key_here
+ENVIRONMENT=production
+FORCE_HTTPS=true
+CORS_ORIGINS=["https://dreamcatcher.yourdomain.com"]
 
 # Optional: ComfyUI Integration
 COMFY_API_URL=http://localhost:8188
@@ -98,6 +101,20 @@ sudo certbot certonly --standalone \
 cd docker
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+### Production HTTPS Enforcement
+
+Production Docker config now enforces HTTPS at multiple layers:
+
+- `docker/nginx-production.conf`
+  - Redirects all HTTP (`:80`) traffic to HTTPS (`:443`) with `301`
+  - Terminates TLS and forwards `X-Forwarded-Proto` headers
+- `docker/docker-compose.prod.yml` backend environment
+  - `ENVIRONMENT=production`
+  - `FORCE_HTTPS=true`
+  - `CORS_ORIGINS=["https://${FULL_DOMAIN}"]`
+
+These settings ensure production requests are served over HTTPS and backend redirects insecure HTTP requests when needed.
 
 ### 4. Systemd Service
 

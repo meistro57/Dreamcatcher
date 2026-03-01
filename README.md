@@ -39,6 +39,8 @@ A 24/7 self-hosted system that:
 - ✅ **Comprehensive Notification System** with real-time toast notifications, management panel, and desktop notifications
 - ✅ **Advanced Filtering & Search** with multi-criteria client-side filtering and bulk operations
 - ✅ **Semantic Search System** with vector embeddings, similarity search, and intelligent idea discovery
+- ✅ **System Operations Panel** with guarded restart/rebuild actions for local Docker development
+- ✅ **System Log Viewer** with recent log filters plus semantic log search/backfill controls
 - ✅ **Comprehensive Documentation** with complete CLAUDE.md for future development
 
 ## Architecture Overview
@@ -129,6 +131,20 @@ For local development without domain requirements:
    - Hit the voice button and speak your idea
    - Watch the AI agents process it in real-time
 
+### Local Login Credentials
+
+For this local setup, sign in with:
+
+- **Username**: `user`
+- **Password**: `TempPass123!`
+
+You can override seeded local credentials with:
+
+- `DEFAULT_DEV_USER_EMAIL`
+- `DEFAULT_DEV_USER_USERNAME`
+- `DEFAULT_DEV_USER_PASSWORD`
+- `DEFAULT_DEV_USER_FULL_NAME`
+
 📖 **Detailed local setup guide**: [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)
 
 ### 🚀 Production Deployment
@@ -156,6 +172,8 @@ For production deployment with domain:
 
 📖 **Detailed production setup**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
+Production mode enforces HTTPS when `ENVIRONMENT=production` and `FORCE_HTTPS=true`.
+
 ## Features
 
 ### Core Functionality
@@ -168,6 +186,10 @@ For production deployment with domain:
 - **Advanced Search**: Multi-criteria filtering with client-side performance
 - **Semantic Search**: Vector-based similarity search with intelligent idea discovery
 - **Related Ideas**: Automatic detection of conceptually similar ideas
+- **System Log Viewer**: Inspect agent/system logs directly from Settings -> System
+- **System Actions**: Optional guarded controls to restart/rebuild backend/frontend from Settings -> System
+- **Runtime API Key Manager**: Update provider keys from Settings -> System, with optional `.env` persistence for local/dev
+- **Processing Watchdog**: Automatically marks long-stuck ideas as `failed` to prevent infinite `processing` states
 
 ### Advanced Capabilities
 - **Self-Improvement**: System evolves and optimizes itself using Claude AI
@@ -196,6 +218,20 @@ For production deployment with domain:
 - **[Agent System](docs/AGENTS.md)** - AI personalities and capabilities
 - **[Self-Improvement](docs/SELF_IMPROVEMENT.md)** - Autonomous evolution system
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment guide
+
+## Local System Actions (Optional)
+
+System restart/rebuild controls are disabled by default and intended for local/dev use.
+
+Add these to `.env` to enable them:
+
+```env
+ENABLE_SYSTEM_ACTIONS=true
+SYSTEM_ACTION_USERS=user,admin
+IDEA_PROCESSING_TIMEOUT_MINUTES=15
+```
+
+Then restart backend and open `Settings -> System`.
 
 ## Status
 

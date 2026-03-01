@@ -8,6 +8,8 @@ from typing import List
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -58,6 +60,7 @@ def _parse_cors_origins() -> List[str]:
 
 
 ALLOWED_CORS_ORIGINS = _parse_cors_origins()
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").lower() == "production"
 
 
 @asynccontextmanager
@@ -185,6 +188,11 @@ app = FastAPI(
 )
 
 # Add middleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+if IS_PRODUCTION and os.getenv("FORCE_HTTPS", "true").lower() == "true":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_CORS_ORIGINS,

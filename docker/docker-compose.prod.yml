@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dreamcatcher-db
+    environment:
+      POSTGRES_DB: dreamcatcher
+      POSTGRES_USER: dreamcatcher
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /opt/dreamcatcher/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: dreamcatcher-redis
+    volumes:
+      - /opt/dreamcatcher/redis:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: dreamcatcher-backend
+    environment:
+      - DATABASE_URL=postgresql://dreamcatcher:${DB_PASSWORD}@postgres:5432/dreamcatcher
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - COMFY_API_URL=${COMFY_API_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=production
+      - FORCE_HTTPS=true
+      - CORS_ORIGINS=["https://${FULL_DOMAIN}"]
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - /opt/dreamcatcher/storage:/app/storage
+      - /var/log/dreamcatcher:/app/logs
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: dreamcatcher-frontend
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: dreamcatcher-nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx-production.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - /var/log/dreamcatcher/nginx:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+  scheduler:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.scheduler
+    container_name: dreamcatcher-scheduler
+    environment:
+      - DATABASE_URL=postgresql://dreamcatcher:${DB_PASSWORD}@postgres:5432/dreamcatcher
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LOG_LEVEL=INFO
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - /opt/dreamcatcher/storage:/app/storage
+      - /var/log/dreamcatcher:/app/logs
+    restart: unless-stopped
+    networks:
+      - dreamcatcher-network
+
+networks:
+  dreamcatcher-network:
+    driver: bridge

@@ -1,6 +1,18 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const resolveApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api`
+  }
+
+  return 'http://localhost:8000/api'
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -27,17 +39,10 @@ apiClient.interceptors.request.use(
 )
 
 // Response interceptor
+// Auth refresh/logout handling is centralized in authStore.ts
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized
-      localStorage.removeItem('auth_token')
-      window.location.href = '/login'
-    }
-    
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
 // API functions
@@ -53,6 +58,10 @@ export const api = {
     refresh: (data: any) => apiClient.post('/auth/refresh', data),
     me: () => apiClient.get('/auth/me'),
     changePassword: (data: any) => apiClient.post('/auth/change-password', data),
+    searchUsers: (q: string, limit = 10) => apiClient.get('/auth/users/search', { params: { q, limit } }),
+    unlockUser: (userId: string) => apiClient.post(`/auth/users/${userId}/unlock`),
+    resetUserPassword: (userId: string, newPassword: string) =>
+      apiClient.post(`/auth/users/${userId}/reset-password`, { new_password: newPassword }),
   },
   
   // Ideas
@@ -103,6 +112,30 @@ export const api = {
   embeddings: {
     stats: () => apiClient.get('/embeddings/stats'),
     batchUpdate: (batchSize?: number) => apiClient.post('/embeddings/batch_update', { batch_size: batchSize }),
+    logStats: () => apiClient.get('/logs/embeddings/stats'),
+    logBatchUpdate: (batchSize?: number) => apiClient.post('/logs/embeddings/batch_update', null, {
+      params: { batch_size: batchSize }
+    }),
+  },
+
+  logs: {
+    list: (params?: any) => apiClient.get('/logs', { params }),
+    semanticSearch: (params: any) => apiClient.get('/logs/search/semantic', { params }),
+  },
+
+  system: {
+    actionsStatus: () => apiClient.get('/system/actions'),
+    runAction: (action: string) => apiClient.post(`/system/actions/${action}`),
+  },
+
+  settings: {
+    apiKeysStatus: () => apiClient.get('/settings/api-keys/status'),
+    updateApiKeys: (data: {
+      anthropic_api_key?: string
+      openai_api_key?: string
+      openrouter_api_key?: string
+      persist_to_env?: boolean
+    }) => apiClient.post('/settings/api-keys', data),
   },
 }
 
