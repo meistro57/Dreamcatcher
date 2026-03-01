@@ -16,7 +16,7 @@ from importlib import import_module
 from uuid import uuid4
 
 try:  # pragma: no cover - import flexibility for tests and runtime
-    from ..database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD
+    from ..database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD, SystemMetricsCRUD
     from ..database.models import User
     from ..agents import agent_registry, AgentListener, AgentClassifier
     from ..agents.base_agent import AgentMessage
@@ -30,7 +30,7 @@ try:  # pragma: no cover - import flexibility for tests and runtime
         IdeaResponse, ProposalResponse, AgentStatusResponse
     )
 except ImportError:  # pragma: no cover - fallback when run as script
-    from database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD
+    from database import get_db_dependency, IdeaCRUD, ProposalCRUD, AgentCRUD, AgentLogCRUD, SystemMetricsCRUD
     from database.models import User
     from agents import agent_registry, AgentListener, AgentClassifier
     from agents.base_agent import AgentMessage
@@ -1271,8 +1271,7 @@ async def get_proposals(
         if status == "pending":
             proposals = ProposalCRUD.get_pending_proposals(db)
         else:
-            # Get all proposals with basic filtering
-            proposals = db.query(Proposal).offset(skip).limit(limit).all()
+            proposals = ProposalCRUD.get_proposals(db, skip=skip, limit=limit)
         
         return [
             ProposalResponse(
@@ -1379,7 +1378,6 @@ async def send_agent_message(
             raise HTTPException(status_code=400, detail="Invalid JSON data")
         
         # Create message
-        from ..agents.base_agent import AgentMessage
         message = AgentMessage(
             id=f"api_{agent_id}_{datetime.utcnow().timestamp()}",
             sender='api',
@@ -1492,7 +1490,6 @@ async def get_system_metrics(
 ):
     """Get system metrics"""
     try:
-        from ..database import SystemMetricsCRUD
         metrics = SystemMetricsCRUD.get_metrics(db, metric_name, hours)
         
         return {
@@ -1502,7 +1499,7 @@ async def get_system_metrics(
                     'metric_value': metric.metric_value,
                     'metric_type': metric.metric_type,
                     'timestamp': metric.timestamp.isoformat(),
-                    'metadata': metric.metadata
+                    'metadata': metric.labels or {}
                 }
                 for metric in metrics
             ],
@@ -1518,7 +1515,6 @@ async def get_system_metrics(
 async def get_error_summary(hours: int = 24, db: Session = Depends(get_db_dependency)):
     """Get error summary"""
     try:
-        from ..database import AgentLogCRUD
         error_logs = AgentLogCRUD.get_error_logs(db, hours)
         
         # Group errors by agent

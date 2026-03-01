@@ -81,16 +81,13 @@ class BaseAgent(ABC):
             self.logger.info(f"Processing message {message.id} from {message.sender}")
             
             # Log activity start
-            with get_db() as db:
-                AgentCRUD.log_agent_activity(
-                    db=db,
-                    agent_id=self.agent_id,
-                    action=message.action,
-                    status='started',
-                    idea_id=message.data.get('idea_id'),
-                    input_data=message.data,
-                    started_at=started_at
-                )
+            self._safe_log_activity(
+                action=message.action,
+                status='started',
+                idea_id=message.data.get('idea_id'),
+                input_data=message.data,
+                started_at=started_at,
+            )
             
             # Process the message
             result = await self.process(message.data)
@@ -98,18 +95,15 @@ class BaseAgent(ABC):
             completed_at = datetime.utcnow()
             
             # Log successful completion
-            with get_db() as db:
-                AgentCRUD.log_agent_activity(
-                    db=db,
-                    agent_id=self.agent_id,
-                    action=message.action,
-                    status='completed',
-                    idea_id=message.data.get('idea_id'),
-                    input_data=message.data,
-                    output_data=result,
-                    started_at=started_at,
-                    completed_at=completed_at
-                )
+            self._safe_log_activity(
+                action=message.action,
+                status='completed',
+                idea_id=message.data.get('idea_id'),
+                input_data=message.data,
+                output_data=result,
+                started_at=started_at,
+                completed_at=completed_at,
+            )
             
             self.success_count += 1
             self.total_processed += 1
@@ -121,23 +115,71 @@ class BaseAgent(ABC):
             self.logger.error(f"Error processing message {message.id}: {e}")
             
             # Log failure
-            with get_db() as db:
-                AgentCRUD.log_agent_activity(
-                    db=db,
-                    agent_id=self.agent_id,
-                    action=message.action,
-                    status='failed',
-                    idea_id=message.data.get('idea_id'),
-                    input_data=message.data,
-                    error_message=str(e),
-                    started_at=started_at,
-                    completed_at=completed_at
-                )
+            self._safe_log_activity(
+                action=message.action,
+                status='failed',
+                idea_id=message.data.get('idea_id'),
+                input_data=message.data,
+                error_message=str(e),
+                started_at=started_at,
+                completed_at=completed_at,
+            )
             
             self.failure_count += 1
             self.total_processed += 1
             
             return None
+
+    async def log_activity(
+        self,
+        action: str,
+        status: str,
+        idea_id: Optional[str] = None,
+        input_data: Optional[Dict[str, Any]] = None,
+        output_data: Optional[Dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Compatibility helper used by specialized agents for structured logging."""
+        now = datetime.utcnow()
+        self._safe_log_activity(
+            action=action,
+            status=status,
+            idea_id=idea_id,
+            input_data=input_data,
+            output_data=output_data,
+            error_message=error_message,
+            started_at=now,
+            completed_at=now if status in {"completed", "failed"} else None,
+        )
+
+    def _safe_log_activity(
+        self,
+        action: str,
+        status: str,
+        idea_id: Optional[str] = None,
+        input_data: Optional[Dict[str, Any]] = None,
+        output_data: Optional[Dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+        started_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None,
+    ) -> None:
+        """Best-effort agent activity logging that never breaks primary flow."""
+        try:
+            with get_db() as db:
+                AgentCRUD.log_agent_activity(
+                    db=db,
+                    agent_id=self.agent_id,
+                    action=action,
+                    status=status,
+                    idea_id=idea_id,
+                    input_data=input_data,
+                    output_data=output_data,
+                    error_message=error_message,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                )
+        except Exception as exc:
+            self.logger.debug(f"Skipping activity log for {self.agent_id}: {exc}")
     
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get agent performance metrics"""

@@ -6,6 +6,7 @@ import json
 
 from .models import (
     Idea, Tag, IdeaExpansion, IdeaVisual, Proposal, ProposalTask,
+    User,
     Agent, AgentLog, SystemMetrics, ScheduledTask
 )
 
@@ -51,10 +52,30 @@ class BaseCRUD(Generic[TModel]):
 
 class IdeaCRUD:
     """CRUD operations for Ideas"""
+
+    @staticmethod
+    def _resolve_default_user_id(db: Session) -> str:
+        user = db.query(User).order_by(User.created_at.asc()).first()
+        if user:
+            return user.id
+
+        bootstrap_user = User(
+            email="system@example.com",
+            username="system",
+            full_name="System User",
+            password_hash="system-placeholder-hash",
+            is_active=True,
+            is_verified=True,
+        )
+        db.add(bootstrap_user)
+        db.flush()
+        return bootstrap_user.id
     
     @staticmethod
     def create_idea(db: Session, content: str, source_type: str, **kwargs) -> Idea:
         """Create a new idea"""
+        if not kwargs.get("user_id"):
+            kwargs["user_id"] = IdeaCRUD._resolve_default_user_id(db)
         idea = Idea(
             content_raw=content,
             source_type=source_type,
@@ -377,6 +398,15 @@ class ProposalCRUD:
         return proposal
     
     @staticmethod
+    def get_proposals(
+        db: Session,
+        skip: int = 0,
+        limit: int = 50
+    ) -> List[Proposal]:
+        """Get proposals with pagination."""
+        return db.query(Proposal).offset(skip).limit(limit).all()
+
+    @staticmethod
     def get_pending_proposals(db: Session) -> List[Proposal]:
         """Get all pending proposals"""
         return db.query(Proposal).filter(Proposal.status == 'pending').all()
@@ -517,7 +547,7 @@ class SystemMetricsCRUD:
             metric_name=metric_name,
             metric_value=metric_value,
             metric_type=metric_type,
-            metadata=metadata or {}
+            labels=metadata or {}
         )
         db.add(metric)
         db.commit()

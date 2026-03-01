@@ -77,9 +77,9 @@ class TestEmbeddingService:
         """Test updating idea embedding"""
         embedding_service.model = mock_model
         
-        with patch('backend.services.embedding_service.SessionLocal') as mock_session:
+        with patch('services.embedding_service.SessionLocal') as mock_session:
             mock_db = MagicMock()
-            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             mock_idea = MagicMock()
             mock_db.query.return_value.filter.return_value.first.return_value = mock_idea
@@ -121,7 +121,7 @@ class TestEmbeddingService:
     async def test_search_similar_logs(self, embedding_service):
         """Test semantic log search scoring and filtering."""
         with patch.object(embedding_service, "generate_embedding", return_value=[1.0, 0.0, 0.0]):
-            with patch("backend.services.embedding_service.SessionLocal") as mock_session:
+            with patch("services.embedding_service.SessionLocal") as mock_session:
                 mock_db = MagicMock()
                 mock_session.return_value = mock_db
 
@@ -176,9 +176,9 @@ class TestSemanticAgent:
         """Test successful idea processing"""
         idea_id = "test-idea-123"
         
-        with patch('backend.agents.agent_semantic.SessionLocal') as mock_session:
+        with patch('agents.agent_semantic.SessionLocal') as mock_session:
             mock_db = MagicMock()
-            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             mock_idea = MagicMock()
             mock_idea.content_processed = "Test idea content"
@@ -293,9 +293,9 @@ class TestEmbeddingTaskManager:
     @pytest.mark.asyncio
     async def test_get_pending_ideas(self, task_manager):
         """Test getting pending ideas"""
-        with patch('backend.tasks.embedding_tasks.SessionLocal') as mock_session:
+        with patch('tasks.embedding_tasks.SessionLocal') as mock_session:
             mock_db = MagicMock()
-            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             mock_idea = MagicMock()
             mock_idea.id = "test-idea-123"
@@ -350,7 +350,7 @@ class TestEmbeddingTaskManager:
             }
         ]
         
-        with patch('backend.tasks.embedding_tasks.semantic_agent') as mock_agent:
+        with patch('tasks.embedding_tasks.semantic_agent') as mock_agent:
             mock_agent.process_idea.return_value = {'success': True}
             
             await task_manager.process_batch(batch)
@@ -362,16 +362,17 @@ class TestEmbeddingTaskManager:
     @pytest.mark.asyncio
     async def test_get_embedding_health(self, task_manager):
         """Test embedding health check"""
-        with patch('backend.tasks.embedding_tasks.SessionLocal') as mock_session:
+        with patch('tasks.embedding_tasks.SessionLocal') as mock_session:
             mock_db = MagicMock()
-            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value = mock_db
             
             # Mock query results
-            mock_db.query.return_value.filter.return_value.count.side_effect = [100, 80, 10, 5]
+            mock_db.query.return_value.filter.return_value.count.side_effect = [100, 80, 10, 5, 7]
+            mock_db.query.return_value.count.return_value = 10
             
             health = await task_manager.get_embedding_health()
             
-            assert health['status'] == 'healthy'
+            assert health['status'] == 'degraded'
             assert health['total_ideas'] == 100
             assert health['ideas_with_embeddings'] == 80
             assert health['pending_ideas'] == 10

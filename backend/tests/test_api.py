@@ -61,11 +61,11 @@ class TestIdeaEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
-        
-        # Check first idea
-        assert data[0]["content"] == "Test idea 1"
-        assert data[0]["source_type"] == "text"
-        assert data[0]["urgency_score"] == 80.0
+
+        # API returns newest ideas first
+        assert data[0]["content"] == "Test idea 2"
+        assert data[0]["source_type"] == "voice"
+        assert data[0]["urgency_score"] == 60.0
     
     def test_get_ideas_with_filters(self, client: TestClient, db_session):
         """Test getting ideas with filters."""
@@ -247,7 +247,7 @@ class TestMetricsEndpoints:
     
     def test_get_system_metrics(self, client: TestClient, db_session):
         """Test getting system metrics."""
-        from ..database import SystemMetricsCRUD
+        from database import SystemMetricsCRUD
         
         # Create some test metrics
         SystemMetricsCRUD.record_metric(
@@ -326,7 +326,7 @@ class TestProposalEndpoints:
     
     def test_get_proposals_with_data(self, client: TestClient, db_session):
         """Test getting proposals when data exists."""
-        from ..database import ProposalCRUD
+        from database import ProposalCRUD
         
         # Create test idea and proposal
         idea = IdeaCRUD.create_idea(
@@ -353,7 +353,7 @@ class TestProposalEndpoints:
     
     def test_approve_proposal(self, client: TestClient, db_session):
         """Test approving a proposal."""
-        from ..database import ProposalCRUD
+        from database import ProposalCRUD
         
         # Create test proposal
         idea = IdeaCRUD.create_idea(

@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # Import your app modules
 import main
 from database import Base, get_db
+from database.models import User, Role
 from agents import agent_registry
 from services import AIService
 
@@ -57,6 +58,28 @@ def db_session():
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
+        # Seed a default authenticated user for endpoints that require auth.
+        role = db.query(Role).filter(Role.name == "admin").first()
+        if not role:
+            role = Role(name="admin", description="Test admin", permissions={"system.manage": True, "user.update": True})
+            db.add(role)
+            db.flush()
+
+        user = db.query(User).filter(User.username == "tester").first()
+        if not user:
+            user = User(
+                id="test-user-id",
+                email="tester@example.com",
+                username="tester",
+                full_name="Test User",
+                password_hash="test-hash",
+                is_active=True,
+                is_verified=True,
+            )
+            user.roles.append(role)
+            db.add(user)
+            db.commit()
+
         yield db
     finally:
         db.close()
@@ -70,8 +93,16 @@ def client(db_session):
             yield db_session
         finally:
             pass
+
+    def override_get_current_user():
+        return db_session.query(User).filter(User.username == "tester").first()
     
     main.app.dependency_overrides[get_db] = override_get_db
+    try:
+        from api.auth_routes import get_current_user
+        main.app.dependency_overrides[get_current_user] = override_get_current_user
+    except Exception:
+        pass
     
     with TestClient(main.app) as test_client:
         yield test_client
@@ -126,7 +157,7 @@ def clear_agent_registry():
 @pytest.fixture
 def mock_agent():
     """Create a mock agent for testing."""
-    from ..agents.base_agent import BaseAgent
+    from agents.base_agent import BaseAgent
     
     class MockAgent(BaseAgent):
         def __init__(self):

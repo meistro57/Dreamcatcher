@@ -59,24 +59,24 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8">
+      <div className="card p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-700/30">
             <UserPlus className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-white">
             Create Account
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-dark-300 mt-2">
             Join Dreamcatcher and start capturing your ideas
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+            <div className="bg-red-900/20 border border-red-700 rounded-md p-4">
               <div className="flex">
-                <div className="text-sm text-red-600 dark:text-red-400">
+                <div className="text-sm text-red-300">
                   {error}
                 </div>
               </div>
@@ -84,12 +84,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
           )}
 
           <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="full_name" className="block text-sm font-medium text-dark-200 mb-2">
               Full Name
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="full_name"
@@ -99,19 +99,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 required
                 value={formData.full_name}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-3 py-2"
                 placeholder="Enter your full name"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-dark-200 mb-2">
               Email Address
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
+                <Mail className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="email"
@@ -121,19 +121,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 required
                 value={formData.email}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-3 py-2"
                 placeholder="Enter your email address"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="username" className="block text-sm font-medium text-dark-200 mb-2">
               Username
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <User className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="username"
@@ -143,19 +143,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 required
                 value={formData.username}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-3 py-2"
                 placeholder="Choose a username"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-dark-200 mb-2">
               Password
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="password"
@@ -165,7 +165,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 required
                 value={formData.password}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-10 py-2"
                 placeholder="Create a password"
               />
               <button
@@ -174,21 +174,21 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <EyeOff className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 ) : (
-                  <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <Eye className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 )}
               </button>
             </div>
           </div>
 
           <div>
-            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="confirm_password" className="block text-sm font-medium text-dark-200 mb-2">
               Confirm Password
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="confirm_password"
@@ -198,10 +198,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 required
                 value={formData.confirm_password}
                 onChange={handleInputChange}
-                className={`block w-full pl-10 pr-10 py-2 border rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 dark:bg-gray-700 ${
+                className={`input block w-full pl-10 pr-10 py-2 ${
                   formData.confirm_password && !passwordsMatch
-                    ? 'border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500'
-                    : 'border-gray-300 dark:border-gray-600 focus:ring-green-500 focus:border-green-500'
+                    ? 'border-red-600 focus:ring-red-500/20 focus:border-red-500'
+                    : ''
                 }`}
                 placeholder="Confirm your password"
               />
@@ -211,14 +211,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showConfirmPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <EyeOff className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 ) : (
-                  <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <Eye className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 )}
               </button>
             </div>
             {formData.confirm_password && !passwordsMatch && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+              <p className="mt-2 text-sm text-red-300">
                 Passwords do not match
               </p>
             )}
@@ -231,15 +231,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
               type="checkbox"
               checked={acceptTerms}
               onChange={(e) => setAcceptTerms(e.target.checked)}
-              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-dark-500 rounded bg-dark-700"
             />
-            <label htmlFor="accept_terms" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+            <label htmlFor="accept_terms" className="ml-2 block text-sm text-dark-200">
               I agree to the{' '}
-              <a href="#" className="text-green-600 hover:text-green-500 dark:text-green-400">
+              <a href="#" className="text-primary-400 hover:text-primary-300">
                 Terms of Service
               </a>{' '}
               and{' '}
-              <a href="#" className="text-green-600 hover:text-green-500 dark:text-green-400">
+              <a href="#" className="text-primary-400 hover:text-primary-300">
                 Privacy Policy
               </a>
             </label>
@@ -248,7 +248,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
           <button
             type="submit"
             disabled={isLoading || !isFormValid}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-primary w-full flex justify-center py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
@@ -265,12 +265,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
 
           {onSwitchToLogin && (
             <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-dark-300">
                 Already have an account?{' '}
                 <button
                   type="button"
                   onClick={onSwitchToLogin}
-                  className="font-medium text-green-600 hover:text-green-500 dark:text-green-400"
+                  className="font-medium text-primary-400 hover:text-primary-300"
                 >
                   Sign in
                 </button>

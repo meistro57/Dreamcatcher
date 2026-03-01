@@ -253,7 +253,7 @@ class TestSystemMetricsCRUD:
         assert metric.metric_name == "test_metric"
         assert metric.metric_value == 123.45
         assert metric.metric_type == "gauge"
-        assert metric.metadata == {"source": "test"}
+        assert metric.labels == {"source": "test"}
     
     def test_get_metrics(self, db_session: Session):
         """Test retrieving metrics."""

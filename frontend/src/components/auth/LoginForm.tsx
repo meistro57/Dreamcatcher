@@ -42,24 +42,24 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-8">
+      <div className="card p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-700/30">
             <LogIn className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-white">
             Welcome Back
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-dark-300 mt-2">
             Sign in to your Dreamcatcher account
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+            <div className="bg-red-900/20 border border-red-700 rounded-md p-4">
               <div className="flex">
-                <div className="text-sm text-red-600 dark:text-red-400">
+                <div className="text-sm text-red-300">
                   {error}
                 </div>
               </div>
@@ -67,12 +67,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
           )}
 
           <div>
-            <label htmlFor="email_or_username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="email_or_username" className="block text-sm font-medium text-dark-200 mb-2">
               Email or Username
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
+                <Mail className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="email_or_username"
@@ -82,19 +82,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
                 required
                 value={formData.email_or_username}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-3 py-2"
                 placeholder="Enter your email or username"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-dark-200 mb-2">
               Password
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-dark-400" />
               </div>
               <input
                 id="password"
@@ -104,7 +104,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
                 required
                 value={formData.password}
                 onChange={handleInputChange}
-                className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700"
+                className="input block w-full pl-10 pr-10 py-2"
                 placeholder="Enter your password"
               />
               <button
@@ -113,9 +113,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <EyeOff className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 ) : (
-                  <Eye className="h-5 w-5 text-gray-400 hover:text-gray-500" />
+                  <Eye className="h-5 w-5 text-dark-400 hover:text-dark-200" />
                 )}
               </button>
             </div>
@@ -129,15 +129,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-dark-500 rounded bg-dark-700"
               />
-              <label htmlFor="remember_me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+              <label htmlFor="remember_me" className="ml-2 block text-sm text-dark-200">
                 Remember me
               </label>
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
+              <a href="#" className="font-medium text-primary-400 hover:text-primary-300">
                 Forgot your password?
               </a>
             </div>
@@ -146,7 +146,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-primary w-full flex justify-center items-center py-2 px-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
@@ -163,12 +163,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) 
 
           {onSwitchToRegister && (
             <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-dark-300">
                 Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={onSwitchToRegister}
-                  className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                  className="font-medium text-primary-400 hover:text-primary-300"
                 >
                   Sign up
                 </button>
