@@ -96,11 +96,12 @@ class AgentListener(BaseAgent):
                         device_info={**device_info, 'transcription_available': False},
                         location_data=location_data
                     )
+                    idea_id = idea.id
 
-                await self._trigger_processing(idea.id, fallback_content)
+                await self._trigger_processing(idea_id, fallback_content)
                 return {
                     'success': True,
-                    'idea_id': idea.id,
+                    'idea_id': idea_id,
                     'transcription': '',
                     'message': 'Voice captured. Transcription is unavailable on this backend.'
                 }
@@ -122,16 +123,17 @@ class AgentListener(BaseAgent):
                     device_info=device_info,
                     location_data=location_data
                 )
+                idea_id = idea.id
                 
                 # Auto-tag based on content
-                await self._auto_tag_idea(db, idea.id, transcription)
+                await self._auto_tag_idea(db, idea_id, transcription)
             
             # Trigger downstream processing
-            await self._trigger_processing(idea.id, transcription)
+            await self._trigger_processing(idea_id, transcription)
             
             return {
                 'success': True,
-                'idea_id': idea.id,
+                'idea_id': idea_id,
                 'transcription': transcription,
                 'message': 'Voice captured and transcribed successfully'
             }
@@ -169,16 +171,17 @@ class AgentListener(BaseAgent):
                     location_data=location_data,
                     urgency_score=urgency_score
                 )
+                idea_id = idea.id
                 
                 # Auto-tag based on content
-                await self._auto_tag_idea(db, idea.id, content)
+                await self._auto_tag_idea(db, idea_id, content)
             
             # Trigger downstream processing
-            await self._trigger_processing(idea.id, content)
+            await self._trigger_processing(idea_id, content)
             
             return {
                 'success': True,
-                'idea_id': idea.id,
+                'idea_id': idea_id,
                 'content': content,
                 'urgency_score': urgency_score,
                 'message': 'Text captured successfully'
@@ -213,16 +216,17 @@ class AgentListener(BaseAgent):
                     urgency_score=30.0,  # Dreams start with lower urgency
                     device_info={'dream_type': dream_type, 'sleep_stage': sleep_stage}
                 )
+                idea_id = idea.id
                 
                 # Auto-tag dreams
-                await self._auto_tag_dream(db, idea.id, content, dream_type)
+                await self._auto_tag_dream(db, idea_id, content, dream_type)
             
             # Trigger dream-specific processing
-            await self._trigger_dream_processing(idea.id, content, dream_type)
+            await self._trigger_dream_processing(idea_id, content, dream_type)
             
             return {
                 'success': True,
-                'idea_id': idea.id,
+                'idea_id': idea_id,
                 'content': content,
                 'dream_type': dream_type,
                 'message': 'Dream logged successfully'
@@ -255,10 +259,11 @@ class AgentListener(BaseAgent):
                     content_transcribed=description,
                     device_info={'image_path': image_path}
                 )
+                idea_id = idea.id
             
             return {
                 'success': True,
-                'idea_id': idea.id,
+                'idea_id': idea_id,
                 'image_path': image_path,
                 'message': 'Image captured successfully'
             }

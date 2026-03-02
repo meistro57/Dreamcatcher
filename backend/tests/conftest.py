@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Import your app modules
 import main
-from database import Base, get_db
+from database import Base, get_db, get_db_dependency
 from database.models import User, Role
 from agents import agent_registry
 from services import AIService
@@ -31,11 +31,9 @@ def _compile_array_sqlite(_type, _compiler, **_kw):
     return "JSON"
 
 # Test database setup
-SQLALCHEMY_DATABASE_URL = (
-    os.getenv("TEST_DATABASE_URL")
-    or os.getenv("DATABASE_URL")
-    or "sqlite:///./test.db"
-)
+# Never default to DATABASE_URL: test teardown drops all tables.
+# Use an isolated in-memory SQLite DB unless TEST_DATABASE_URL is explicitly provided.
+SQLALCHEMY_DATABASE_URL = os.getenv("TEST_DATABASE_URL") or "sqlite+pysqlite:///:memory:"
 
 engine_kwargs = {}
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
@@ -98,6 +96,7 @@ def client(db_session):
         return db_session.query(User).filter(User.username == "tester").first()
     
     main.app.dependency_overrides[get_db] = override_get_db
+    main.app.dependency_overrides[get_db_dependency] = override_get_db
     try:
         from api.auth_routes import get_current_user
         main.app.dependency_overrides[get_current_user] = override_get_current_user

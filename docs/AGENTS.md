@@ -6,6 +6,41 @@
 
 *The AI personalities that power your idea factory*
 
+## Implementation Status Note
+
+This document includes design intent. For current, code-verified behavior, use:
+
+- `docs/SOURCE_OF_TRUTH.md`
+
+## Implemented Today (Code-Verified)
+
+Registered by default in `backend/api/routes.py`:
+
+- `listener` (`AgentListener`)
+- `classifier` (`AgentClassifier`)
+- `semantic` (`SemanticAgent`)
+
+Attempted optional runtime registration (startup continues if missing/failing):
+
+- `expander`
+- `proposer`
+- `reviewer`
+- `visualizer`
+- `meta`
+
+Runtime path currently used by capture flow:
+
+1. `/api/capture/*` endpoints call `listener_agent.handle_message(...)`
+2. `listener` persists idea and triggers `classifier`
+3. `classifier` can trigger `expander` when thresholds are met
+4. `expander` can trigger `visualizer`
+5. `visualizer` can trigger `proposer`
+
+Known code drift to track:
+
+- Some agent docs below describe capabilities not fully enforced by current route auth/model contracts.
+- See `docs/SOURCE_OF_TRUTH.md` for specific mismatches.
+
 ## Agent Architecture
 
 Each agent in Dreamcatcher is a specialized AI entity with its own personality, capabilities, and role in the idea processing pipeline. They communicate through Redis message queues and maintain state through the PostgreSQL database.

@@ -6,6 +6,28 @@
 
 *"I analyze. I evolve. I make us better while you sleep."*
 
+## Implementation Status Note
+
+This document includes architectural intent and planned behavior. For current implementation details, use:
+
+- `docs/SOURCE_OF_TRUTH.md`
+
+## Implemented Today (Code-Verified)
+
+The following pieces exist in code:
+
+- Evolution routes at `/api/evolution/*` (`backend/api/evolution.py`)
+- Scheduler routes at `/api/scheduler/*` (`backend/api/scheduler.py`)
+- Evolution orchestration service (`backend/services/evolution_service.py`)
+- Evolution scheduler loop (`backend/scheduler/evolution_scheduler.py`)
+- Meta agent (`backend/agents/agent_meta.py`)
+
+Current caveats:
+
+- Evolution/scheduler endpoints are currently not auth-protected in route definitions.
+- Some self-improvement behavior described below is best treated as target behavior; runtime safety and data-model consistency still need hardening.
+- Treat autonomous code-modification claims as conditional on environment/config and successful optional agent/service registration.
+
 ## Overview
 
 The Dreamcatcher Self-Improvement System is an autonomous evolution engine that continuously monitors, analyzes, and improves the AI agent network. Using Claude AI for code analysis and rewriting, the system identifies performance bottlenecks, reduces errors, and enhances functionality without human intervention.

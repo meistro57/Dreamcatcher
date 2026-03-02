@@ -134,10 +134,12 @@ For local development without domain requirements:
 
 ### Local Login Credentials
 
-For this local setup, sign in with:
+For local development (`ENVIRONMENT=development`), the seeded account is:
 
 - **Username**: `user`
-- **Password**: `TempPass123!`
+- **Password**: `password`
+
+This default dev user is not auto-created in production mode.
 
 You can override seeded local credentials with:
 
@@ -218,11 +220,14 @@ Use [.env.production.example](.env.production.example) as your production templa
 
 - **[LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)** - Local development setup guide
 - **[CLAUDE.md](CLAUDE.md)** - Complete guide for Claude Code development
+- **[Code-Verified Source of Truth](docs/SOURCE_OF_TRUTH.md)** - Canonical implementation map (routes, env, startup, agent wiring)
 - **[Architecture](docs/ARCHITECTURE.md)** - Technical system design
 - **[API Reference](docs/API.md)** - Complete API documentation
 - **[Agent System](docs/AGENTS.md)** - AI personalities and capabilities
 - **[Self-Improvement](docs/SELF_IMPROVEMENT.md)** - Autonomous evolution system
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment guide
+
+When docs conflict, use `docs/SOURCE_OF_TRUTH.md` and source code as authoritative.
 
 ## Local System Actions (Optional)
 

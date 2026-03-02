@@ -182,16 +182,26 @@ class IdeaCRUD:
         ).all()
     
     @staticmethod
-    def get_dormant_ideas(db: Session, days: int = 30) -> List[Idea]:
-        """Get dormant ideas that haven't been processed recently"""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        return db.query(Idea).filter(
+    def get_dormant_ideas(
+        db: Session,
+        days: int | datetime = 30,
+        limit: Optional[int] = None
+    ) -> List[Idea]:
+        """Get dormant ideas that haven't been processed recently.
+
+        Accepts either a day-count or a precomputed cutoff datetime.
+        """
+        cutoff_date = days if isinstance(days, datetime) else datetime.utcnow() - timedelta(days=days)
+        query = db.query(Idea).filter(
             and_(
                 Idea.updated_at < cutoff_date,
                 Idea.is_archived == False,
                 Idea.urgency_score < 30.0
             )
-        ).order_by(desc(Idea.created_at)).all()
+        ).order_by(desc(Idea.created_at))
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
     
     @staticmethod
     def get_ideas_for_context_review(db: Session, limit: int = 50) -> List[Idea]:
@@ -376,21 +386,52 @@ class ProposalCRUD:
         db: Session,
         idea_id: str,
         title: str,
-        description: str,
+        description: Optional[str] = None,
+        content: Optional[str] = None,
         problem_statement: str = '',
         solution_approach: str = '',
         implementation_plan: Optional[Dict] = None,
-        generated_by: str = 'system'
+        generated_by: str = 'system',
+        viability_analysis: Optional[Dict] = None,
+        timeline: Optional[Dict] = None,
+        resource_requirements: Optional[Dict] = None,
+        success_metrics: Optional[Dict] = None,
+        estimated_effort: str = 'medium',
+        priority_score: float = 0.0,
+        status: str = 'pending',
+        agent_version: Optional[str] = None
     ) -> Proposal:
         """Create a new proposal"""
+        def _normalize_json(value: Optional[Dict] | str) -> Dict:
+            if value is None:
+                return {}
+            if isinstance(value, dict):
+                return value
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    return parsed if isinstance(parsed, dict) else {"value": parsed}
+                except json.JSONDecodeError:
+                    return {"value": value}
+            return {"value": value}
+
+        resolved_description = description if description is not None else (content or "")
         proposal = Proposal(
             idea_id=idea_id,
             title=title,
-            description=description,
+            description=resolved_description,
             problem_statement=problem_statement,
             solution_approach=solution_approach,
             implementation_plan=implementation_plan or {},
-            generated_by=generated_by
+            generated_by=generated_by,
+            viability_analysis=_normalize_json(viability_analysis),
+            timeline=_normalize_json(timeline),
+            resource_requirements=_normalize_json(resource_requirements),
+            success_metrics=_normalize_json(success_metrics),
+            estimated_effort=estimated_effort,
+            priority_score=priority_score,
+            status=status,
+            agent_version=agent_version,
         )
         db.add(proposal)
         db.commit()
@@ -674,17 +715,45 @@ class VisualizationCRUD:
     def create_visualization(
         db: Session,
         idea_id: str,
-        visualization_type: str,
-        data: Dict[str, Any],
-        config: Optional[Dict] = None
+        visualization_type: str = "primary",
+        data: Optional[Dict[str, Any]] = None,
+        config: Optional[Dict] = None,
+        image_path: Optional[str] = None,
+        prompt_used: Optional[str] = None,
+        style_config: Optional[Dict] = None,
+        generation_params: Optional[Dict] = None,
+        agent_version: Optional[str] = None,
     ) -> IdeaVisual:
-        """Create a visualization record"""
+        """Create a visualization record.
+
+        Supports both legacy payload mode (`data`/`config`) and direct field mode.
+        """
+        def _normalize_json(value: Optional[Dict] | str) -> Dict:
+            if value is None:
+                return {}
+            if isinstance(value, dict):
+                return value
+            if isinstance(value, str):
+                try:
+                    parsed = json.loads(value)
+                    return parsed if isinstance(parsed, dict) else {"value": parsed}
+                except json.JSONDecodeError:
+                    return {"value": value}
+            return {"value": value}
+
+        resolved_style_config = _normalize_json(style_config if style_config is not None else config)
+        resolved_generation_params = _normalize_json(generation_params) if generation_params is not None else {
+            'type': visualization_type,
+            'data': data or {}
+        }
         visual = IdeaVisual(
             idea_id=idea_id,
-            image_path=f"viz_{idea_id}_{visualization_type}.json",
-            prompt_used=f"Generated {visualization_type} visualization",
-            style_config=config or {},
-            generation_params={'type': visualization_type, 'data': data}
+            image_path=image_path or f"viz_{idea_id}_{visualization_type}.json",
+            prompt_used=prompt_used or f"Generated {visualization_type} visualization",
+            style_config=resolved_style_config,
+            generation_params=resolved_generation_params,
+            visualization_type=visualization_type,
+            agent_version=agent_version,
         )
         db.add(visual)
         db.commit()

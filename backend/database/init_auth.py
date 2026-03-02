@@ -35,6 +35,10 @@ def init_auth_system():
                 dev_username = os.getenv("DEFAULT_DEV_USER_USERNAME", "user")
                 dev_password = os.getenv("DEFAULT_DEV_USER_PASSWORD", "password")
                 dev_full_name = os.getenv("DEFAULT_DEV_USER_FULL_NAME", "Default User")
+                enforce_default_dev_credentials = os.getenv(
+                    "ENFORCE_DEFAULT_DEV_CREDENTIALS",
+                    "true"
+                ).lower() == "true"
 
                 dev_user = auth_service.get_user_by_email(dev_email)
 
@@ -50,6 +54,34 @@ def init_auth_system():
                     dev_user.is_verified = True
                     db.commit()
                     logger.info("Default development user created")
+                elif enforce_default_dev_credentials:
+                    logger.info("Synchronizing default development user credentials")
+                    updated = False
+
+                    normalized_username = dev_username.lower()
+                    if dev_user.username != normalized_username:
+                        dev_user.username = normalized_username
+                        updated = True
+
+                    if dev_user.full_name != dev_full_name:
+                        dev_user.full_name = dev_full_name
+                        updated = True
+
+                    if not auth_service.pwd_context.verify(dev_password, dev_user.password_hash):
+                        dev_user.password_hash = auth_service.pwd_context.hash(dev_password)
+                        updated = True
+
+                    if not dev_user.is_active:
+                        dev_user.is_active = True
+                        updated = True
+
+                    if not dev_user.is_verified:
+                        dev_user.is_verified = True
+                        updated = True
+
+                    if updated:
+                        db.commit()
+                        logger.info("Default development user synchronized")
 
             logger.info("Authentication system initialized successfully")
 

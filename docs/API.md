@@ -1,907 +1,147 @@
-<div align="center">
-  <img src="../Dreamcatcher_logo.png" alt="Dreamcatcher Logo" width="150" />
-</div>
+# Dreamcatcher API Reference (Code-Verified)
 
-# Dreamcatcher API Documentation
+Last verified: 2026-03-02
 
-*RESTful API for your AI-powered idea factory*
+Canonical implementation map: `docs/SOURCE_OF_TRUTH.md`
 
 ## Base URL
 
-```
-https://dreamcatcher.yourdomain.com/api
-```
+- Local backend: `http://localhost:8000`
+- API prefix: `/api`
+- OpenAPI docs: `/docs`
 
-## ✅ Recent API Improvements
+## Auth Model
 
-### New Features Added:
-- **Complete CRUD operations** for all idea management
-- **Agent management endpoints** for direct agent communication  
-- **System monitoring APIs** with real-time metrics
-- **Evolution control endpoints** for autonomous system improvement
-- **Error tracking and reporting** with detailed diagnostics
-- **Enhanced WebSocket support** for real-time updates
-- **Health check endpoints** for all services
-- **Comprehensive error handling** with specific error types
+- Bearer JWT via `Authorization: Bearer <token>`.
+- Public endpoints:
+  - `GET /`
+  - `GET /api/status`
+  - `GET /api/health`
+  - `GET /api/auth/health`
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `POST /api/auth/refresh`
+- Most remaining endpoints require auth.
 
-## Authentication
+## Endpoint Matrix
 
-Most endpoints require authentication via JWT tokens:
+### Core
 
-```bash
-Authorization: Bearer <your-jwt-token>
-```
+- `GET /api/health` (public)
+- `GET /api/status` (public)
+- `WS /api/ws` (public websocket endpoint)
 
-## Response Format
+### Authentication
 
-All responses follow this structure:
+- `POST /api/auth/register` (public)
+- `POST /api/auth/login` (public)
+- `POST /api/auth/refresh` (public)
+- `POST /api/auth/logout` (auth)
+- `POST /api/auth/logout-all` (auth)
+- `GET /api/auth/me` (auth)
+- `POST /api/auth/change-password` (auth)
+- `POST /api/auth/verify-email/{token}` (public)
+- `GET /api/auth/users` (auth + permission `user.read`)
+- `GET /api/auth/users/search` (auth + permission `user.read`)
+- `POST /api/auth/users/{user_id}/deactivate` (auth + permission `user.update`)
+- `POST /api/auth/users/{user_id}/activate` (auth + permission `user.update`)
+- `POST /api/auth/users/{user_id}/unlock` (auth + permission `user.update`)
+- `POST /api/auth/users/{user_id}/reset-password` (auth + permission `user.update`)
+- `POST /api/auth/cleanup-sessions` (auth + role `admin`)
+- `GET /api/auth/health` (public)
 
-```json
-{
-  "success": true,
-  "data": { ... },
-  "message": "Optional message",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
-```
+### Capture
 
-Error responses:
-```json
-{
-  "success": false,
-  "error": "Error description",
-  "code": "ERROR_CODE",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
-```
+- `POST /api/capture/voice` (auth, multipart)
+- `POST /api/capture/text` (auth, JSON)
+- `POST /api/capture/dream` (auth, form)
 
-## Endpoints
+### Ideas
 
-### Health Check
+- `GET /api/ideas` (public in current implementation)
+- `GET /api/ideas/{idea_id}` (public in current implementation)
+- `PUT /api/ideas/{idea_id}` (public in current implementation)
+- `DELETE /api/ideas/{idea_id}` (public in current implementation)
+- `POST /api/ideas/{idea_id}/archive` (public in current implementation)
+- `POST /api/ideas/{idea_id}/expand` (public in current implementation)
+- `GET /api/ideas/{idea_id}/visuals` (public in current implementation)
+- `GET /api/ideas/{idea_id}/expansions` (public in current implementation)
+- `GET /api/ideas/{idea_id}/related` (auth)
+- `POST /api/ideas/{idea_id}/generate_embedding` (auth)
 
-#### GET `/health`
-Check system health and status.
+### Search and Embeddings
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "status": "healthy",
-    "database": "connected",
-    "redis": "connected",
-    "agents": {
-      "listener": "active",
-      "classifier": "active",
-      "expander": "active",
-      "visualizer": "active",
-      "proposer": "active",
-      "reviewer": "active"
-    },
-    "version": "1.0.0"
-  }
-}
-```
-
-### Idea Capture
-
-#### POST `/capture/voice`
-Submit voice recording for transcription and processing.
-
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body: Audio file (wav, mp3, m4a)
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer <token>" \
-  -F "audio=@recording.wav" \
-  https://dreamcatcher.yourdomain.com/api/capture/voice
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "idea_id": "uuid-here",
-    "transcription": "Your transcribed text",
-    "processing_status": "queued",
-    "estimated_processing_time": "30s"
-  }
-}
-```
-
-#### POST `/capture/text`
-Submit text idea directly.
-
-**Request:**
-```json
-{
-  "content": "Your idea text here",
-  "source": "manual",
-  "metadata": {
-    "tags": ["optional", "tags"],
-    "priority": "medium"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "idea_id": "uuid-here",
-    "content": "Your idea text here",
-    "processing_status": "queued"
-  }
-}
-```
-
-#### POST `/capture/dream`
-Submit dream or subconscious idea.
-
-**Request:**
-```json
-{
-  "content": "Dream description",
-  "dream_date": "2024-01-01T08:00:00Z",
-  "lucidity_level": "high",
-  "emotional_tone": "positive"
-}
-```
-
-### Ideas Management
-
-#### GET `/ideas`
-Retrieve ideas with filtering and pagination.
-
-**Query Parameters:**
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 20)
-- `category`: Filter by category
-- `status`: Filter by processing status
-- `search`: Full-text search
-- `sort`: Sort by (created_at, urgency_score, novelty_score)
-- `order`: Sort order (asc, desc)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "ideas": [
-      {
-        "id": "uuid-here",
-        "content_raw": "Original idea text",
-        "content_transcribed": "Transcribed text",
-        "category": "creative",
-        "urgency_score": 85,
-        "novelty_score": 92,
-        "processing_status": "completed",
-        "created_at": "2024-01-01T00:00:00Z",
-        "tags": ["innovation", "urgent"],
-        "expansions_count": 3,
-        "visualizations_count": 2,
-        "proposals_count": 1
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 150,
-      "total_pages": 8
-    }
-  }
-}
-```
-
-#### GET `/ideas/{idea_id}`
-Get detailed information about a specific idea.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "idea": {
-      "id": "uuid-here",
-      "content_raw": "Original idea text",
-      "content_transcribed": "Transcribed text",
-      "category": "creative",
-      "urgency_score": 85,
-      "novelty_score": 92,
-      "processing_status": "completed",
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:30:00Z",
-      "tags": ["innovation", "urgent"],
-      "expansions": [
-        {
-          "id": "expansion-uuid",
-          "content": "Expanded idea content",
-          "type": "claude",
-          "created_at": "2024-01-01T00:10:00Z"
-        }
-      ],
-      "visualizations": [
-        {
-          "id": "viz-uuid",
-          "image_path": "/storage/images/idea-visualization.png",
-          "prompt": "Visual prompt used",
-          "type": "primary",
-          "created_at": "2024-01-01T00:20:00Z"
-        }
-      ],
-      "proposals": [
-        {
-          "id": "proposal-uuid",
-          "title": "Project Proposal",
-          "viability_score": 87,
-          "status": "pending",
-          "created_at": "2024-01-01T00:25:00Z"
-        }
-      ]
-    }
-  }
-}
-```
-
-#### PUT `/ideas/{idea_id}`
-Update an existing idea.
-
-**Request:**
-```json
-{
-  "content": "Updated idea content",
-  "category": "business",
-  "tags": ["updated", "business"],
-  "metadata": {
-    "notes": "Additional notes"
-  }
-}
-```
-
-#### DELETE `/ideas/{idea_id}`
-Delete an idea and all related data.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Idea deleted successfully"
-}
-```
-
-### Expansions
-
-#### GET `/ideas/{idea_id}/expansions`
-Get all expansions for an idea.
-
-#### POST `/ideas/{idea_id}/expansions`
-Request new expansion for an idea.
-
-**Request:**
-```json
-{
-  "expansion_type": "creative",
-  "focus": "technical implementation",
-  "ai_model": "claude"
-}
-```
-
-### Visualizations
-
-#### GET `/ideas/{idea_id}/visualizations`
-Get all visualizations for an idea.
-
-#### POST `/ideas/{idea_id}/visualizations`
-Request new visualization.
-
-**Request:**
-```json
-{
-  "style": "modern",
-  "type": "concept",
-  "prompt_override": "Optional custom prompt"
-}
-```
+- `GET /api/search/semantic` (auth)
+- `POST /api/embeddings/batch_update` (auth)
+- `GET /api/embeddings/stats` (auth)
+- `GET /api/logs/search/semantic` (auth)
+- `POST /api/logs/embeddings/batch_update` (auth)
+- `GET /api/logs/embeddings/stats` (auth)
 
 ### Proposals
 
-#### GET `/proposals`
-Get all proposals with filtering.
-
-**Query Parameters:**
-- `status`: Filter by proposal status
-- `viability_min`: Minimum viability score
-- `sort`: Sort by (created_at, viability_score, priority_score)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "proposals": [
-      {
-        "id": "uuid-here",
-        "title": "Project Proposal Title",
-        "idea_id": "idea-uuid",
-        "viability_score": 87,
-        "priority_score": 92,
-        "status": "pending",
-        "estimated_effort": "medium",
-        "created_at": "2024-01-01T00:00:00Z",
-        "timeline": {
-          "total_duration": "3 months",
-          "key_milestones": [...]
-        }
-      }
-    ]
-  }
-}
-```
-
-#### GET `/proposals/{proposal_id}`
-Get detailed proposal information.
-
-#### PUT `/proposals/{proposal_id}`
-Update proposal status or content.
-
-**Request:**
-```json
-{
-  "status": "approved",
-  "notes": "Ready to proceed",
-  "modifications": {
-    "timeline": "Extended to 4 months"
-  }
-}
-```
-
-### Agents
-
-#### GET `/agents`
-Get status of all agents.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "agents": [
-      {
-        "id": "listener",
-        "name": "Capture Agent",
-        "status": "active",
-        "last_activity": "2024-01-01T00:00:00Z",
-        "processed_today": 25,
-        "performance_score": 98
-      }
-    ]
-  }
-}
-```
-
-#### POST `/agents/{agent_id}/trigger`
-Manually trigger an agent process.
-
-**Request:**
-```json
-{
-  "action": "process",
-  "data": {
-    "idea_id": "uuid-here",
-    "parameters": {}
-  }
-}
-```
-
-### Reviews
-
-#### GET `/reviews`
-Get review history and insights.
-
-#### POST `/reviews/trigger`
-Trigger manual review process.
-
-**Request:**
-```json
-{
-  "review_type": "daily",
-  "strategy": "serendipity",
-  "parameters": {
-    "max_ideas": 5
-  }
-}
-```
-
-### Analytics
-
-#### GET `/analytics/dashboard`
-Get dashboard analytics data.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "stats": {
-      "total_ideas": 1250,
-      "ideas_today": 8,
-      "processing_rate": 0.95,
-      "completion_rate": 0.87
-    },
-    "category_breakdown": {
-      "creative": 45,
-      "business": 30,
-      "technical": 15,
-      "personal": 10
-    },
-    "recent_activity": [...]
-  }
-}
-```
-
-### Agent Management
-
-#### GET `/agents/status`
-Get status of all agents.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "agent_id": "listener",
-      "name": "Input Listener",
-      "is_active": true,
-      "total_processed": 1250,
-      "success_rate": 0.98,
-      "version": "1.0.0",
-      "queue_depth": 0,
-      "last_error": null,
-      "last_error_at": null
-    }
-  ]
-}
-```
-
-### Settings
-
-#### GET `/settings/api-keys/status`
-Get runtime API key configuration status (secrets are never returned).
-
-**Response:**
-```json
-{
-  "anthropic_configured": true,
-  "openai_configured": false,
-  "openrouter_configured": true,
-  "ai_available": true,
-  "can_persist_to_env": true,
-  "default_model": "openrouter/openai/gpt-4o-mini",
-  "available_models": ["claude-3-haiku", "gpt-4", "openrouter/openai/gpt-4o-mini"]
-}
-```
-
-#### POST `/settings/api-keys`
-Update runtime API keys.
-
-**Request:**
-```json
-{
-  "anthropic_api_key": "sk-ant-...",
-  "openai_api_key": "sk-...",
-  "openrouter_api_key": "sk-or-...",
-  "persist_to_env": true
-}
-```
-
-`persist_to_env` requires system-actions permission and writes keys to the local `.env`.
-
-#### GET `/settings/ai-models`
-Get model catalog for UI selection.
-
-**Query Parameters:**
-- `include_openrouter_dynamic`: include live OpenRouter model catalog (`true`/`false`, default `true`)
-- `refresh_openrouter`: force refresh OpenRouter model cache (`true`/`false`, default `false`)
-
-#### POST `/settings/ai-model`
-Set runtime default AI model.
-
-**Request:**
-```json
-{
-  "model": "openrouter/openai/gpt-4o-mini",
-  "persist_to_env": true
-}
-```
-
-`persist_to_env` requires system-actions permission and writes `DEFAULT_AI_MODEL` to local `.env`.
-
-#### POST `/agents/{agent_id}/message`
-Send message to a specific agent.
-
-**Request:**
-```json
-{
-  "action": "process",
-  "data": {
-    "content": "Direct agent message",
-    "priority": "high"
-  }
-}
-```
-
-#### GET `/agents/{agent_id}/logs`
-Get logs for a specific agent.
-
-**Query Parameters:**
-- `hours`: Hours of logs to retrieve (default: 24)
-- `status`: Filter by log status (started, completed, failed)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "agent_id": "listener",
-    "logs": [
-      {
-        "id": "uuid-here",
-        "action": "process",
-        "status": "completed",
-        "started_at": "2024-01-01T00:00:00Z",
-        "completed_at": "2024-01-01T00:00:30Z",
-        "processing_time": 30.0
-      }
-    ]
-  }
-}
-```
-
-#### GET `/logs`
-Get recent logs across all agents.
-
-**Query Parameters:**
-- `hours`: Time window in hours (default: `24`)
-- `status`: Optional status filter (`started`, `completed`, `failed`)
-- `agent_id`: Optional agent filter
-- `limit`: Max rows (1-500, default: `100`)
-
-#### GET `/logs/search/semantic`
-Search logs by semantic similarity.
-
-**Query Parameters:**
-- `query`: Search query text (required)
-- `threshold`: Similarity threshold (0-1, default: `0.4`)
-- `limit`: Max results (1-100, default: `20`)
-- `agent_id`: Optional agent filter
-- `status`: Optional status filter
-
-#### POST `/logs/embeddings/batch_update`
-Backfill or refresh embeddings for logs missing vectors.
-
-**Query Parameters:**
-- `batch_size`: Rows per run (1-1000, default: `100`)
-
-#### GET `/logs/embeddings/stats`
-Get log embedding coverage statistics.
-
-Returns total log count, embedded count, percentage, model stats, and embedding dimension.
-
-#### GET `/system/actions`
-Get runtime availability for guarded system actions (restart/rebuild controls used by Settings UI).
-
-#### POST `/system/actions/{action}`
-Run a guarded system action.
-
-Supported actions:
-- `restart_backend`
-- `rebuild_backend`
-- `restart_frontend`
-- `rebuild_frontend`
-- `restart_stack`
-- `rebuild_stack`
-
-System actions are disabled by default and require:
-- `ENABLE_SYSTEM_ACTIONS=true`
-- `SYSTEM_ACTION_USERS` containing the logged-in username
-
-#### GET `/system/actions/history`
-Get recent guarded system action execution history.
-
-**Query Parameters:**
-- `limit`: Max records (default: `50`, max: `500`)
-- `status`: Optional filter (`success` or `failed`)
-
-**Response Fields:**
-- `id`: Audit event id
-- `timestamp`: Action start time
-- `completed_at`: Action completion time
-- `actor`: Username that triggered action
-- `action`: Action name
-- `status`: `success` or `failed`
-- `duration_ms`: Runtime in milliseconds
-
-History is stored in `SYSTEM_ACTION_AUDIT_FILE` (default: `./logs/system_actions_audit.jsonl`).
-
-### System Monitoring
-
-#### GET `/metrics`
-Get system metrics.
-
-**Query Parameters:**
-- `metric_name`: Filter by specific metric
-- `hours`: Hours of metrics to retrieve (default: 24)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "metrics": [
-      {
-        "metric_name": "cpu_usage",
-        "metric_value": 65.0,
-        "timestamp": "2024-01-01T00:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-#### GET `/errors`
-Get error summary.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "total_errors": 12,
-    "errors_by_agent": {
-      "listener": [
-        {
-          "action": "process",
-          "error_message": "Connection timeout",
-          "timestamp": "2024-01-01T00:00:00Z"
-        }
-      ]
-    }
-  }
-}
-```
-
-#### GET `/stats`
-Get comprehensive system statistics.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "ideas": {
-      "total": 1250,
-      "high_urgency": 45,
-      "by_source": {
-        "voice": 850,
-        "text": 400
-      }
-    },
-    "agents": {
-      "total_agents": 7,
-      "active_agents": 7
-    },
-    "services": {
-      "ai_available": true,
-      "ai_models": ["claude-3-sonnet", "gpt-4"]
-    }
-  }
-}
-```
-
-### Evolution System
-
-#### GET `/evolution/status`
-Get evolution system status.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "current_cycle": 42,
-    "last_evolution": "2024-01-01T00:00:00Z",
-    "next_evolution": "2024-01-01T04:00:00Z",
-    "health_score": 85.5,
-    "improvements_applied": 12
-  }
-}
-```
-
-#### POST `/evolution/trigger`
-Manually trigger evolution cycle.
-
-**Request:**
-```json
-{
-  "strategy": "performance_optimization",
-  "force": false
-}
-```
-
-#### POST `/evolution/rollback`
-Rollback to previous version.
-
-**Request:**
-```json
-{
-  "version": "1.0.41",
-  "reason": "Performance regression"
-}
-```
-
-#### GET `/evolution/metrics`
-Get evolution performance metrics.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "evolution_cycles": 42,
-    "successful_evolutions": 40,
-    "rollbacks": 2,
-    "average_improvement": 3.2,
-    "performance_trend": "improving"
-  }
-}
-```
-
-### WebSocket Endpoints
-
-#### `/ws/ideas`
-Real-time idea processing updates.
-
-**Connection:**
-```javascript
-const ws = new WebSocket('wss://dreamcatcher.yourdomain.com/api/ws/ideas');
-```
-
-**Message Format:**
-```json
-{
-  "type": "idea_update",
-  "data": {
-    "idea_id": "uuid-here",
-    "status": "processing",
-    "stage": "expansion",
-    "progress": 60
-  }
-}
-```
-
-#### `/ws/agents`
-Real-time agent status updates.
-
-## Rate Limits
-
-- **API Endpoints**: 100 requests per minute
-- **Voice Upload**: 10 requests per minute
-- **WebSocket**: 1 connection per user
-
-## Error Codes
-
-- `INVALID_TOKEN`: Authentication failed
-- `RATE_LIMIT_EXCEEDED`: Too many requests
-- `INVALID_INPUT`: Request validation failed
-- `PROCESSING_ERROR`: Internal processing error
-- `AGENT_UNAVAILABLE`: Agent is offline
-- `STORAGE_ERROR`: File storage issue
-
-## SDK Examples
-
-### JavaScript/Node.js
-
-```javascript
-import DreamcatcherAPI from 'dreamcatcher-sdk';
-
-const api = new DreamcatcherAPI({
-  baseURL: 'https://dreamcatcher.yourdomain.com/api',
-  token: 'your-jwt-token'
-});
-
-// Capture text idea
-const idea = await api.capture.text({
-  content: 'New idea here',
-  metadata: { priority: 'high' }
-});
-
-// Get idea details
-const details = await api.ideas.get(idea.id);
-
-// Request expansion
-const expansion = await api.expansions.create(idea.id, {
-  type: 'technical',
-  ai_model: 'claude'
-});
-```
-
-### Python
-
-```python
-from dreamcatcher_client import DreamcatcherClient
-
-client = DreamcatcherClient(
-    base_url="https://dreamcatcher.yourdomain.com/api",
-    token="your-jwt-token"
-)
-
-# Capture voice idea
-with open('recording.wav', 'rb') as audio_file:
-    idea = client.capture.voice(audio_file)
-
-# Get proposals
-proposals = client.proposals.list(status='pending')
-
-# Trigger review
-review = client.reviews.trigger(
-    review_type='daily',
-    strategy='context_based'
-)
-```
-
-### cURL Examples
-
-```bash
-# Health check
-curl https://dreamcatcher.yourdomain.com/api/health
-
-# Capture text idea
-curl -X POST \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"content": "New idea here"}' \
-  https://dreamcatcher.yourdomain.com/api/capture/text
-
-# Get ideas
-curl -H "Authorization: Bearer <token>" \
-  "https://dreamcatcher.yourdomain.com/api/ideas?category=creative&limit=10"
-
-# Upload voice
-curl -X POST \
-  -H "Authorization: Bearer <token>" \
-  -F "audio=@recording.wav" \
-  https://dreamcatcher.yourdomain.com/api/capture/voice
-```
-
-## Development
-
-### Local Development
-
-```bash
-# Start development server
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# API will be available at http://localhost:8000
-# Documentation at http://localhost:8000/docs
-```
-
-### Testing
-
-```bash
-# Run API tests
-pytest tests/api/
-
-# Load testing
-locust -f tests/load/locustfile.py --host=https://dreamcatcher.yourdomain.com
-```
-
-This API enables full control over your AI idea factory, allowing you to build custom interfaces, integrations, and automations around your creative process.
-
----
-
-*API designed for developers who think in code and dream in possibilities.*
+- `GET /api/proposals` (public in current implementation)
+- `POST /api/proposals/{proposal_id}/approve` (public in current implementation)
+
+### Agents and Observability
+
+- `GET /api/agents/status` (public in current implementation)
+- `POST /api/agents/{agent_id}/message` (public in current implementation)
+- `GET /api/agents/{agent_id}/logs` (public in current implementation)
+- `GET /api/logs` (auth)
+- `GET /api/metrics` (public in current implementation)
+- `GET /api/errors` (public in current implementation)
+- `GET /api/stats` (public in current implementation)
+
+### Settings and System Actions
+
+- `GET /api/settings/api-keys/status` (auth)
+- `POST /api/settings/api-keys` (auth)
+- `GET /api/settings/ai-models` (auth)
+- `POST /api/settings/ai-model` (auth)
+- `GET /api/system/actions` (auth)
+- `GET /api/system/actions/history` (auth + system-action permission)
+- `POST /api/system/actions/{action}` (auth + system-action permission)
+
+### Evolution
+
+- `GET /api/evolution/status`
+- `POST /api/evolution/cycle`
+- `POST /api/evolution/force`
+- `POST /api/evolution/schedule`
+- `GET /api/evolution/history`
+- `POST /api/evolution/rollback`
+- `POST /api/evolution/config`
+- `GET /api/evolution/trends`
+- `POST /api/evolution/emergency-stop`
+- `GET /api/evolution/health`
+- `POST /api/evolution/analyze`
+- `GET /api/evolution/agents/performance`
+- `GET /api/evolution/opportunities`
+- `POST /api/evolution/opportunities/{opportunity_id}/apply`
+- `GET /api/evolution/backups`
+- `POST /api/evolution/test-improvement`
+
+### Scheduler
+
+- `GET /api/scheduler/status`
+- `POST /api/scheduler/start`
+- `POST /api/scheduler/stop`
+- `POST /api/scheduler/config`
+- `POST /api/scheduler/force-evolution`
+- `GET /api/scheduler/trends`
+- `GET /api/scheduler/health`
+- `GET /api/scheduler/stats`
+- `POST /api/scheduler/reset-stats`
+- `POST /api/scheduler/emergency-stop`
+- `GET /api/scheduler/next-evolution`
+- `POST /api/scheduler/test-health-check`
+- `GET /api/scheduler/logs`
+
+## Frontend Contract Note
+
+Current frontend client still defines `POST /ideas`, but backend currently has no `POST /api/ideas` route.
+
+## Security Note
+
+Some non-auth routes above are currently public by implementation. Keep this doc aligned with code until route protection is tightened.

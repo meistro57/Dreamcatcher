@@ -12,6 +12,12 @@ class CaptureVoiceRequest(BaseModel):
     urgency: str = Field("normal", description="Urgency level")
     location: Optional[str] = Field(None, description="Optional location context")
 
+class IdeaCreateRequest(BaseModel):
+    content: str = Field(..., description="Idea text content")
+    source_type: str = Field("text", description="Source type: voice, text, dream, image")
+    category: Optional[str] = Field(None, description="Optional category")
+    urgency_score: Optional[float] = Field(None, description="Optional urgency score 0-100")
+
 # Response Models
 class CaptureVoiceResponse(BaseModel):
     success: bool

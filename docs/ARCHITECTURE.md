@@ -6,6 +6,12 @@
 
 *The technical blueprint for your AI-powered idea factory*
 
+## Implementation Status Note
+
+This document describes intended architecture. For current, code-verified behavior (actual routes, startup flow, env vars, and wiring), use:
+
+- `docs/SOURCE_OF_TRUTH.md`
+
 ## System Overview
 
 Dreamcatcher is a distributed AI agent system designed to capture, process, and evolve ideas in real-time. The architecture supports instant voice capture, intelligent processing, visual generation, and continuous improvement.
@@ -265,7 +271,7 @@ nginx (reverse proxy)
 
 ## Current System Status
 
-**Implementation**: ~95% complete and production-ready
+**Implementation**: mixed maturity; see `docs/SOURCE_OF_TRUTH.md` for runtime-accurate details.
 
 ### ✅ Completed Features
 - **Core agent system** with 7 specialized agents and reliable communication

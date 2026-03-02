@@ -157,7 +157,9 @@ class Idea(Base):
     # Status
     processing_status = Column(String, default='pending')  # 'pending', 'processing', 'completed', 'failed'
     is_archived = Column(Boolean, default=False)
+    archived_reason = Column(Text)
     is_favorite = Column(Boolean, default=False)
+    quality_score = Column(Float, default=0.0)
     
     # Relationships
     user = relationship("User", back_populates="ideas")
@@ -222,7 +224,10 @@ class IdeaVisual(Base):
     
     # Metadata
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     generator_type = Column(String, default='comfyui')
+    visualization_type = Column(String, default='primary')
+    agent_version = Column(String)
     
     # Relationships
     idea = relationship("Idea", back_populates="visuals")
@@ -239,6 +244,13 @@ class Proposal(Base):
     problem_statement = Column(Text)
     solution_approach = Column(Text)
     implementation_plan = Column(JSON)
+    viability_analysis = Column(JSON)
+    timeline = Column(JSON)
+    resource_requirements = Column(JSON)
+    success_metrics = Column(JSON)
+    estimated_effort = Column(String, default='medium')
+    priority_score = Column(Float, default=0.0)
+    agent_version = Column(String)
     
     # Status
     status = Column(String, default='pending')  # 'pending', 'approved', 'rejected', 'in_progress', 'completed'

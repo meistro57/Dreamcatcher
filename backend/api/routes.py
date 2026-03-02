@@ -26,7 +26,7 @@ try:  # pragma: no cover - import flexibility for tests and runtime
     from .websocket_manager import WebSocketManager
     from .auth_routes import get_current_user
     from .models import (
-        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
+        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse, IdeaCreateRequest,
         IdeaResponse, ProposalResponse, AgentStatusResponse
     )
 except ImportError:  # pragma: no cover - fallback when run as script
@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover - fallback when run as script
     from api.websocket_manager import WebSocketManager
     from api.auth_routes import get_current_user
     from api.models import (
-        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse,
+        CaptureTextRequest, CaptureVoiceResponse, CaptureTextResponse, IdeaCreateRequest,
         IdeaResponse, ProposalResponse, AgentStatusResponse
     )
 
@@ -737,6 +737,61 @@ async def capture_dream(
             status_code=500,
             detail=str(e) if debug else "Internal server error"
         )
+
+# Get ideas endpoint
+@router.post("/ideas", response_model=IdeaResponse)
+async def create_idea(
+    request: IdeaCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_dependency)
+):
+    """Create an idea directly (frontend contract endpoint)."""
+    try:
+        content = request.content.strip()
+        if not content:
+            raise HTTPException(status_code=400, detail="content is required")
+        if len(content) > MAX_TEXT_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Text too long. Maximum length is {MAX_TEXT_LENGTH} characters"
+            )
+
+        idea = IdeaCRUD.create_idea(
+            db=db,
+            content=content,
+            source_type=request.source_type,
+            user_id=current_user.id,
+            content_transcribed=content,
+            category=request.category,
+            urgency_score=request.urgency_score if request.urgency_score is not None else 50.0,
+            processing_status="pending",
+        )
+
+        await ws_manager.broadcast({
+            'type': 'idea_captured',
+            'idea_id': idea.id,
+            'source': request.source_type,
+            'content': content
+        })
+
+        return IdeaResponse(
+            id=idea.id,
+            content=idea.content_transcribed or idea.content_raw,
+            source_type=idea.source_type,
+            category=idea.category,
+            urgency_score=idea.urgency_score or 0.0,
+            novelty_score=idea.novelty_score or 0.0,
+            created_at=idea.created_at,
+            updated_at=idea.updated_at,
+            processing_status=idea.processing_status,
+            tags=[],
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create idea: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # Get ideas endpoint
 @router.get("/ideas", response_model=List[IdeaResponse])

@@ -1,5 +1,8 @@
 # Dreamcatcher Development Roadmap
 
+> Note: This is a planning document and may not reflect current implementation.  
+> For current behavior, see `docs/SOURCE_OF_TRUTH.md`.
+
 ## Phase 1: Foundation (Weeks 1-2)
 **Status**: 🚧 In Progress
 
